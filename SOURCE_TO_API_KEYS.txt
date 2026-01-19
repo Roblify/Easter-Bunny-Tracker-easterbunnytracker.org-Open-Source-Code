@@ -1,0 +1,7 @@
+This .txt file showcases the link to each website where you can generate/fetch your API key for the tracker.
+In main.js, use CTRL + F on your keyboard and search for each key to find it's location in the file. (For example: search "YOUR_MAPBOX_API_KEY" and it will lead you to line 8)
+
+
+YOUR_MAPBOX_API_KEY: https://www.mapbox.com/
+YOUR_WEATHERAPI_KEY: https://www.weatherapi.com/
+YOUR_TOKEN_HERE: https://ipinfo.io/

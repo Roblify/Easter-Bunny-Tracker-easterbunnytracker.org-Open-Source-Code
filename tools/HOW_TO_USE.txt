@@ -1,0 +1,58 @@
+The compiler.py is a file that fetches your route.json file (inside your data folder) and changes the unix timestamps to be up to the date with the date of your choice.
+
+
+
+
+
+Inside the compiler.py file, at this section of the code:
+
+    ap.add_argument(
+        "--day1",
+        default="2027-03-27", # CHANGE TO DATE OF YOUR CHOICE (YYYY-MM-DD)
+        help="Target date for day 1 (YYYY-MM-DD). Default: 2027-03-27" # CHANGE TO DATE OF YOUR CHOICE (YYYY-MM-DD)
+    )
+    ap.add_argument(
+        "--day2",
+        default="2027-03-28", # CHANGE TO DATE OF YOUR CHOICE (YYYY-MM-DD) DISCLAIMER: DAY 2 IS ALWAYS EASTER DAY
+        help="Target date for day 2 (YYYY-MM-DD). Default: 2027-03-28" # CHANGE TO DATE OF YOUR CHOICE (YYYY-MM-DD)
+    )
+
+
+You want to change the day 1 date to whichever the upcoming Easter Eve date is. 
+You want to change the day 2 date to whichever the upcoming Easter Day date is.
+
+
+You must do so in the tools/compiler.py itself. Changing it in this file will have no affect.
+
+
+
+How to execute:
+After making the change, be sure to save the new file (by using CTRL + S on your keyboard).
+Open up your terminal (or Command Prompt, whichever you use) and type the following:
+
+python tools/compiler.py
+
+OR:
+
+python tools\compiler.py
+
+OR:
+
+py tools\compiler.py
+
+
+Whichever command works on your system should be used. The script will run using the Python version that is installed and configured on your device.
+Note: You are required to install Python on your device in order to work on the tracker. You can do so through this website: https://www.python.org/downloads/
+
+
+
+After running the line, if you see the following:
+
+Done. Updated in-place: data\route.json
+Pretty field: Pretty Arrival EDT 2026
+Mapped original dates -> target dates:
+  2026-04-04 -> 2027-03-27
+  2026-04-05 -> 2027-03-28
+
+
+Then that means the compiler has successfully done it's job and updated the route.json file. If it doesn't and outputs an error, figure it out from there.

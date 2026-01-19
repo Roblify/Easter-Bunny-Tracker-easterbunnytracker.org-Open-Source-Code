@@ -1,0 +1,483 @@
+/* Ensure the container fills the window */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: #000;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Cesium container must be full height */
+#cesiumContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* HUD container */
+#hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 9999;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+
+  padding: 12px 14px;
+  border-radius: 14px;
+
+  background: radial-gradient(circle at top left,
+      rgba(60, 70, 105, 0.58),
+      rgba(20, 20, 28, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(14px);
+
+  color: #f9fafb;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  user-select: none;
+}
+
+/* Title (e.g. “Easter Bunny Tracker”) */
+.hud-title {
+  margin: 0;
+  padding-right: 6px;
+
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+/* Each stat row */
+.hud-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+
+  padding: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  /* keep the row on a single line on wider screens */
+}
+
+/* Label (e.g. “Status:”, “Speed:”) */
+.hud-row span:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+
+  color: rgba(249, 250, 251, 0.7);
+}
+
+/* Value text */
+.hud-row span:last-child {
+  font-size: 13px;
+  font-weight: 500;
+
+  text-align: left;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+/* Subtle dimming state helper (optional if you ever add it) */
+.hud-row.is-muted span:last-child {
+  opacity: 0.7;
+}
+
+/* Mobile / small screens */
+@media (max-width: 640px) {
+  #hud {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px 14px;
+    padding: 10px 11px;
+  }
+
+  .hud-row {
+    width: 100%;
+    justify-content: space-between;
+    white-space: normal;
+    /* allow wrapping on small screens */
+  }
+
+  .hud-row span:last-child {
+    text-align: right;
+    white-space: normal;
+  }
+}
+
+/* Camera lock button (bottom-right) */
+#lockBtn {
+  position: absolute;
+  right: 12px;
+  bottom: 27px;
+  z-index: 10000;
+
+  background: rgba(20, 20, 24, 0.72);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: blur(10px);
+}
+
+/* HELP button (bottom-left) */
+#helpBtn {
+  position: absolute;
+  left: 12px;
+  bottom: 56px;
+  /* keeps it above Cesium watermark/credits area */
+  z-index: 10000;
+
+  background: rgba(20, 20, 24, 0.72);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  backdrop-filter: blur(10px);
+}
+
+#helpBtn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+#helpBtn:active {
+  transform: translateY(1px);
+}
+
+/* Help overlay */
+.help-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20000;
+  display: none;
+  /* shown via .is-open */
+}
+
+.help-overlay.is-open {
+  display: block;
+}
+
+.help-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  animation: helpFadeIn 180ms ease-out forwards;
+}
+
+.help-modal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.98);
+  width: min(900px, calc(100% - 24px));
+  height: min(560px, calc(100% - 24px));
+
+  background: rgba(20, 20, 24, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px);
+
+  opacity: 0;
+  animation: helpPopIn 200ms ease-out forwards;
+  overflow: hidden;
+}
+
+.help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.help-title {
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+.help-close {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.help-close:hover {
+  border-color: rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.help-body {
+  height: calc(100% - 49px);
+  display: grid;
+  grid-template-columns: 220px 1fr;
+}
+
+/* Left vertical tabs */
+.help-tabs {
+  padding: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-tab {
+  text-align: left;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.help-tab:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.help-title {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.help-tab.is-active {
+  border-color: rgba(255, 255, 255, 0.40);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Right content area */
+.help-content {
+  padding: 14px;
+  overflow: auto;
+
+}
+
+.help-pane-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(255, 255, 255, 0.92)
+}
+
+.help-pane p {
+  margin: 0 0 10px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.help-note {
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.help-pane {
+  display: none;
+  min-height: 100%;
+}
+
+.help-pane.is-active {
+  display: block;
+}
+
+.help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.help-link:hover {
+  border-color: rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.help-version {
+  margin-top: auto;
+  /* pushes it to the bottom */
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: left;
+  user-select: none;
+}
+
+/* Settings: music toggle button inside help modal */
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  padding: 10px 14px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.94);
+
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+
+  text-align: center;
+  text-decoration: none;
+
+  backdrop-filter: blur(10px);
+}
+
+.settings-button:hover {
+  border-color: rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.settings-button:active {
+  transform: translateY(1px);
+}
+
+/* Visual feedback for on/off state via aria-pressed */
+.settings-button[aria-pressed="false"] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.80);
+}
+
+.settings-button[aria-pressed="false"]:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Animations */
+@keyframes helpFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes helpPopIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.0);
+  }
+}
+
+.city-panel {
+  position: absolute;
+  right: 12px;
+  bottom: 75px;
+  /* sits just above the lock button (bottom: 12px) */
+  z-index: 10000;
+
+  max-width: 320px;
+  /* was 260px */
+  padding: 12px 14px;
+  /* a bit more space */
+
+  border-radius: 14px;
+  background: rgba(20, 20, 24, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  backdrop-filter: blur(10px);
+
+  color: #fff;
+  font-size: 13px;
+  /* was 12px */
+  line-height: 1.45;
+}
+
+.city-panel-title {
+  font-weight: 900;
+  font-size: 13px;
+  margin-bottom: 6px;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  text-align: center;
+  /* optional but looks nice */
+}
+
+.city-panel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 1px 0;
+}
+
+.city-panel-row span:first-child {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.city-panel-row span:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+#lockBtn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+#lockBtn:active {
+  transform: translateY(1px);
+}
+
+.cesium-infoBox {
+  top: 80px;
+}
