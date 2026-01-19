@@ -88,7 +88,7 @@
   helpBtn.addEventListener("click", openHelp);
   helpCloseBtn.addEventListener("click", closeHelp);
 
-  // Backdrop click closes (your backdrop has data-help-close="1")
+  // Backdrop click closes (the backdrop has data-help-close="1")
   helpOverlay.addEventListener("click", (e) => {
     if (e.target && e.target.matches("[data-help-close]")) closeHelp();
   });
@@ -108,4 +108,5 @@
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && helpOverlay.classList.contains("is-open")) closeHelp();
   });
+
 })();
