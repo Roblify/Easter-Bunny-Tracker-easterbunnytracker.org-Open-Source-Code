@@ -9,7 +9,7 @@ const WEATHERAPI_KEY = "YOUR_WEATHERAPI_KEY"; // <-- put your WeatherAPI token h
 const BASKET_START_DR = 77;
 const CITY_PANEL_MIN_DR = 77;
 
-const ROUTE_FILE = "data/route-testing.json"
+const ROUTE_FILE = "data/route.json"
 
 const TAKEOFF_DR = 76;
 const PRE_STATUS_MAX_DR = 75;
@@ -2079,3 +2079,4 @@ function deliveryEndTime(stop) {
         if (el) el.textContent = "Error (see console)";
     }
 })();
+
