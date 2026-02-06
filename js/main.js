@@ -1,9 +1,5 @@
 // main.js - Easter Bunny Tracker (stats + bunny marker + baskets + camera lock, Mapbox version)
 
-
-// IMPORTANT: Go to SOURCE_TO_API_KEYS.txt to figure out how to fetch/generate each API key.
-
-
 // =====================
 // CONFIG
 // =====================
@@ -13,15 +9,20 @@ const WEATHERAPI_KEY = "YOUR_WEATHERAPI_KEY"; // <-- put your WeatherAPI token h
 const BASKET_START_DR = 77;
 const CITY_PANEL_MIN_DR = 77;
 
-const ROUTE_FILE = "data/route.json"
+const ROUTE_FILE = "data/route-testing.json"
 
 const TAKEOFF_DR = 76;
 const PRE_STATUS_MAX_DR = 75;
 
 // Camera settings (in Mapbox zoom levels)
-const LOCKED_ZOOM = 4.7;           // zoom when locked to bunny
-const UNLOCKED_MIN_ZOOM = 0.1;   // min zoom when unlocked
-const UNLOCKED_MAX_ZOOM = 8.0;   // max zoom when unlocked
+const LOCKED_ZOOM = 4.7;
+const UNLOCKED_MIN_ZOOM = 0.1;
+const UNLOCKED_MAX_ZOOM = 8.0;
+
+// Cinematic locked camera (side-tracking)
+const CINEMATIC_ZOOM_DEFAULT = 6;
+const CINEMATIC_LOCKED_PITCH = 67;
+const CINEMATIC_SIDE_OFFSET_DEFAULT_DEG = 30;
 
 const STARTUP_GRACE_SEC = 20;
 
@@ -66,7 +67,9 @@ const initialSettings = loadSettings();
 
 // Map style persists
 let currentStyle =
-    initialSettings.mapStyle === "satellite" ? "satellite" : "standard";
+    (initialSettings.mapStyle === "standard" || initialSettings.mapStyle === "satellite")
+        ? initialSettings.mapStyle
+        : "satellite";
 
 // Travel speed unit persists
 let speedUnitMode =
@@ -74,6 +77,17 @@ let speedUnitMode =
 
 // Streamer mode persists
 let streamerModeEnabled = !!initialSettings.streamerModeEnabled;
+// Cinematic camera persists
+let cinematicCamEnabled = !!initialSettings.cinematicCamEnabled;
+
+let cinematicSideOffsetDeg = (Number.isFinite(Number(initialSettings.cinematicSideOffsetDeg)))
+    ? Math.max(0, Math.min(180, Number(initialSettings.cinematicSideOffsetDeg)))
+    : CINEMATIC_SIDE_OFFSET_DEFAULT_DEG;
+
+let cinematicZoom =
+    (Number.isFinite(Number(initialSettings.cinematicZoom)))
+        ? Math.max(1, Math.min(10, Number(initialSettings.cinematicZoom)))
+        : CINEMATIC_ZOOM_DEFAULT;
 
 // Session-only state
 let isDelivering = false; // true only while the Bunny is stopped & delivering
@@ -83,6 +97,12 @@ let isDelivering = false; // true only while the Bunny is stopped & delivering
 // =====================
 function $(id) {
     return document.getElementById(id);
+}
+
+function clampZoom1to10(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return CINEMATIC_ZOOM_DEFAULT;
+    return Math.max(1, Math.min(10, Math.round(n * 10) / 10));
 }
 
 const fmtInt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
@@ -281,7 +301,7 @@ function toNum(x) {
 }
 
 async function loadRoute() {
-    const res = await fetch(`./${ROUTE_FILE}`, { cache: "no-store" });
+    const res = await fetch(`./${ROUTE_FILE}`, { cache: "no-store" }); // CHANGE THIS LATER
     if (!res.ok) throw new Error(`Failed to load route.json (${res.status})`);
     const data = await res.json();
 
@@ -318,7 +338,6 @@ function cityOnly(stop) {
     return (stop && stop.City) ? stop.City : "Unknown";
 }
 
-// ✅ ADD THESE RIGHT HERE (helpers section)
 function safeNum(x) {
     const n = Number(x);
     return Number.isFinite(n) ? n : NaN;
@@ -364,11 +383,13 @@ function deliveryEndTime(stop) {
         }
 
         // CHANGE LATER IF YOU WANT PRE-START REDIRECT
+        /*
         const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 5, 6, 0, 0);
         if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
+        */
 
         // Show initial "Loading..." if element exists
         const statDurationEl = $("statDuration");
@@ -535,6 +556,7 @@ function deliveryEndTime(stop) {
         function applyCityPanelCollapsed() {
             if (!cityPanel) return;
 
+            // Toggle a class (optional, in case you later want CSS effects)
             cityPanel.classList.toggle("is-collapsed", cityPanelCollapsed);
 
             // Hide/show all rows
@@ -609,6 +631,7 @@ function deliveryEndTime(stop) {
 
         initCityPanelCollapseUI();
 
+        let cinematicBearing = 0;
         let currentTravelDirection = null;
 
         // Live city data state
@@ -920,11 +943,14 @@ function deliveryEndTime(stop) {
                 // Center on bunny
                 if (bunnyMarker) {
                     const ll = bunnyMarker.getLngLat();
+
+                    const useCine = cinematicCamEnabled;
+
                     map.easeTo({
                         center: ll,
-                        zoom: LOCKED_ZOOM,
-                        pitch: 0,
-                        bearing: 0,
+                        zoom: useCine ? cinematicZoom : LOCKED_ZOOM,
+                        pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
+                        bearing: useCine ? cinematicBearing : 0,
                         duration: 800
                     });
                 }
@@ -946,11 +972,14 @@ function deliveryEndTime(stop) {
         function followBunnyIfLocked() {
             if (!isLocked || !bunnyMarker) return;
             const ll = bunnyMarker.getLngLat();
+
+            const useCine = cinematicCamEnabled;
+
             map.jumpTo({
                 center: ll,
-                zoom: LOCKED_ZOOM,
-                pitch: 0,
-                bearing: 0
+                zoom: useCine ? cinematicZoom : LOCKED_ZOOM,
+                pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
+                bearing: useCine ? cinematicBearing : 0
             });
         }
 
@@ -1044,12 +1073,12 @@ function deliveryEndTime(stop) {
                     (Number.isFinite(d) ? d :
                         (Number.isFinite(a) ? a : aA));
 
-                // ✅ IMPORTANT: if this is DR 76 and it's effectively a 0-second stop,
+                // IMPORTANT: if this is DR 76 and it's effectively a 0-second stop,
                 // create a small "takeoff window" so segment math doesn't collapse.
                 const dr = Number(s.DR);
                 if (Number.isFinite(dr) && dr === TAKEOFF_DR && Number.isFinite(aA)) {
                     if (!Number.isFinite(end) || end <= aA + 0.5) {
-                        end = aA + 8;
+                        end = aA + 8; // 8s window feels nice; change if you want
                     }
                 }
 
@@ -1225,6 +1254,24 @@ function deliveryEndTime(stop) {
             const text = formatViewerEtaText(deltaSeconds);
 
             el.textContent = text;
+        }
+
+        function bearingDeg(lat1, lon1, lat2, lon2) {
+            const toRad = (d) => (d * Math.PI) / 180;
+            const toDeg = (r) => (r * 180) / Math.PI;
+
+            const φ1 = toRad(lat1);
+            const φ2 = toRad(lat2);
+            const Δλ = toRad(lon2 - lon1);
+
+            const y = Math.sin(Δλ) * Math.cos(φ2);
+            const x =
+                Math.cos(φ1) * Math.sin(φ2) -
+                Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+            let brng = toDeg(Math.atan2(y, x));
+            brng = (brng + 360) % 360; // 0..360
+            return brng;
         }
 
         function computeTravelDirection(fromStop, toStop) {
@@ -1610,6 +1657,97 @@ function deliveryEndTime(stop) {
         // =====================
         // SETTINGS BUTTONS
         // =====================
+
+        function updateCinematicCamButton() {
+            const btn = $("cinematicCamBtn");
+            if (!btn) return;
+
+            btn.setAttribute("aria-pressed", String(cinematicCamEnabled));
+            btn.textContent = cinematicCamEnabled
+                ? "Camera Angle: Side Tracking"
+                : "Camera Angle: Default";
+        }
+
+        const cineZoomSlider = $("cineZoomSlider");
+        if (cineZoomSlider) {
+            cineZoomSlider.value = clampZoom1to10(cinematicZoom);
+
+            cineZoomSlider.addEventListener("input", () => {
+                cinematicZoom = clampZoom1to10(cineZoomSlider.value);
+                saveSettings({ cinematicZoom });
+
+                updateCinematicOffsetUI();
+
+                if (isLocked && cinematicCamEnabled) {
+                    followBunnyIfLocked();
+                }
+            });
+        }
+
+        function clampDeg0to180(v) {
+            const n = Number(v);
+            if (!Number.isFinite(n)) return CINEMATIC_SIDE_OFFSET_DEFAULT_DEG;
+            return Math.max(0, Math.min(180, Math.round(n)));
+        }
+
+        function updateCinematicOffsetUI() {
+            const offsetWrap = $("cineOffsetWrap");
+            const offsetSlider = $("cineOffsetSlider");
+            const offsetVal = $("cineOffsetVal");
+
+            const zoomWrap = $("cineZoomWrap");
+            const zoomSlider = $("cineZoomSlider");
+            const zoomVal = $("cineZoomVal");
+
+            const show = cinematicCamEnabled;
+
+            if (offsetWrap) offsetWrap.hidden = !show;
+            if (zoomWrap) zoomWrap.hidden = !show;
+
+            if (offsetSlider && offsetVal) {
+                offsetSlider.value = clampDeg0to180(cinematicSideOffsetDeg);
+                offsetVal.textContent = `${clampDeg0to180(cinematicSideOffsetDeg)}°`;
+            }
+
+            if (zoomSlider && zoomVal) {
+                zoomSlider.value = clampZoom1to10(cinematicZoom);
+                zoomVal.textContent = clampZoom1to10(cinematicZoom);
+            }
+        }
+
+        const cinematicCamBtn = $("cinematicCamBtn");
+        if (cinematicCamBtn) {
+            cinematicCamBtn.addEventListener("click", () => {
+                cinematicCamEnabled = !cinematicCamEnabled;
+                saveSettings({ cinematicCamEnabled });
+                updateCinematicCamButton();
+                updateCinematicOffsetUI(); // show/hide slider
+
+                // If currently locked, immediately re-apply the camera style
+                if (isLocked) {
+                    followBunnyIfLocked();
+                }
+            });
+        }
+        updateCinematicCamButton();
+        updateCinematicOffsetUI();
+
+        const cineOffsetSlider = $("cineOffsetSlider");
+        if (cineOffsetSlider) {
+            cineOffsetSlider.value = String(clampDeg0to180(cinematicSideOffsetDeg));
+
+            cineOffsetSlider.addEventListener("input", () => {
+                cinematicSideOffsetDeg = clampDeg0to180(cineOffsetSlider.value);
+                saveSettings({ cinematicSideOffsetDeg });
+
+                updateCinematicOffsetUI();
+
+                if (isLocked && cinematicCamEnabled) {
+                    followBunnyIfLocked();
+                }
+            });
+        }
+
         function updateSpeedUnitButton() {
             const btn = $("travelSpeedTypeBtn");
             if (!btn) return;
@@ -1844,7 +1982,6 @@ function deliveryEndTime(stop) {
                 const cityEggsTotal = Number(s.EggsDelivered) || prevEggsTotal;
                 const cityCarrotsTotal = Number(s.CarrotsEaten) || prevCarrotsTotal;
 
-                // ✅ ORIGINAL interpolation: whole stop uses ArrivalArrival -> Departure
                 const stopDuration = Math.max(1, s.UnixArrivalDeparture - s.UnixArrivalArrival);
                 const stopT = clamp01((now - s.UnixArrivalArrival) / stopDuration);
 
@@ -1870,6 +2007,14 @@ function deliveryEndTime(stop) {
                 const from = stops[seg.from];
                 const to = stops[seg.to];
                 if (!from || !to) return;
+
+                if (
+                    Number.isFinite(from.Latitude) && Number.isFinite(from.Longitude) &&
+                    Number.isFinite(to.Latitude) && Number.isFinite(to.Longitude)
+                ) {
+                    const travelBrng = bearingDeg(from.Latitude, from.Longitude, to.Latitude, to.Longitude);
+                    cinematicBearing = (travelBrng + cinematicSideOffsetDeg) % 360;
+                }
 
                 const toDr = Number(to.DR);
                 const preTakeoffTravel = Number.isFinite(toDr) && toDr < TAKEOFF_DR;
