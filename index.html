@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Easter Bunny Tracker — Countdown</title>
 
-
   <meta name="description"
     content="Track the Easter Bunny live as he delivers eggs and baskets around the world. See his latest location, speed, and more!">
   <meta name="keywords" content="Easter Bunny Tracker, Easter Bunny, live tracker, Easter, bunny tracker">
@@ -25,12 +24,12 @@
     content="Track the Easter Bunny live as he delivers eggs and baskets around the world. See his latest location, speed, and more!">
   <meta name="twitter:image" content="https://easterbunnytracker.org/assets/img/Bunny.png">
 
-
   <link rel="icon" href="/Bunny.png" type="image/png">
   <link rel="stylesheet" href="css/countdown.css" />
 </head>
 
 <body>
+
   <main class="wrap" role="main" aria-live="polite">
     <section class="card">
       <div class="badge">Easter Bunny Tracker</div>
@@ -67,11 +66,12 @@
     </section>
 
     <footer class="foot">
-      <span>🐰</span> <span class="muted">Stay tuned — the Bunny is warming up the engines.</span>
+      <span>🐰</span>
+      <span class="muted">Stay tuned — the Bunny is warming up the engines.</span>
     </footer>
   </main>
 
-  <!-- HELP button (bottom-left) -->
+  <!-- HELP button -->
   <button id="helpBtn" type="button" aria-haspopup="dialog" aria-controls="helpOverlay">
     HELP
   </button>
@@ -87,19 +87,18 @@
       </div>
 
       <div class="help-body">
-        <!-- Left-side vertical tabs -->
         <nav class="help-tabs" aria-label="Help sections">
           <button class="help-tab is-active" type="button" data-tab="about">About</button>
           <button class="help-tab" type="button" data-tab="tos">Terms of Service</button>
           <button class="help-tab" type="button" data-tab="privacy">Privacy Policy</button>
           <button class="help-tab" type="button" data-tab="donate">Donate</button>
           <button class="help-tab" type="button" data-tab="contact">Contact</button>
-
           <div class="help-version">v1.0.0</div>
         </nav>
 
-        <!-- Right-side content area -->
         <section class="help-content">
+
+          <!-- ABOUT -->
           <div class="help-pane is-active" data-pane="about">
             <h4 class="help-pane-title">About</h4>
 
@@ -128,83 +127,74 @@
               The Easter Bunny Tracker is intended for entertainment and seasonal enjoyment and is updated annually
               to improve accuracy, performance, and presentation.
             </p>
-            <div class="help-pane" data-pane="tos">
-              <h4 class="help-pane-title">Terms of Service</h4>
+          </div>
 
-              <p>
-                Read the full Terms of Service on a separate page.
-              </p>
+          <!-- TOS -->
+          <div class="help-pane" data-pane="tos">
+            <h4 class="help-pane-title">Terms of Service</h4>
+            <p>Read the full Terms of Service on a separate page.</p>
+            <p>
+              <a class="help-link" href="terms.html" target="_blank" rel="noopener">
+                Open Terms of Service →
+              </a>
+            </p>
+            <p class="help-note">By using this website, you agree to the Terms of Service.</p>
+          </div>
 
-              <p>
-                <a class="help-link" href="terms.html" target="_blank" rel="noopener">
-                  Open Terms of Service →
-                </a>
-              </p>
+          <!-- PRIVACY -->
+          <div class="help-pane" data-pane="privacy">
+            <h4 class="help-pane-title">Privacy Policy</h4>
+            <p>The full Privacy Policy is available on a separate page.</p>
+            <p>
+              <a class="help-link" href="privacy.html" target="_blank" rel="noopener">
+                Open Privacy Policy →
+              </a>
+            </p>
+            <p class="help-note">This explains what information may be processed when you use the tracker.</p>
+          </div>
 
-              <p class="help-note">
-                By using this website, you agree to the Terms of Service.
-              </p>
-            </div>
-            <div class="help-pane" data-pane="privacy">
-              <h4 class="help-pane-title">Privacy Policy</h4>
+          <!-- DONATE -->
+          <div class="help-pane" data-pane="donate">
+            <h4 class="help-pane-title">Donate</h4>
 
-              <p>
-                The full Privacy Policy is available on a separate page.
-              </p>
+            <p>
+              Hey there. I am Roblify, the Developer of the Easter Bunny Tracker website. This is a website I love and
+              have passion for, as it makes Easter more fun for everyone with the ability to track the Easter Bunny as
+              he is
+              delivering eggs around the globe. Maintaining this website, alongside you using the website to track
+              requires me to pay money to keep the website up and running. Donating through Ko-fi would be a great
+              "Thank you"
+              message to me personally, and your donation would make maintaining the website less of a financial
+              burden,
+              more than you realize. ❤
+            </p>
 
-              <p>
-                <a class="help-link" href="privacy.html" target="_blank" rel="noopener">
-                  Open Privacy Policy →
-                </a>
-              </p>
+            <p>
+              <a class="help-link" href="https://ko-fi.com/YOUR_KOFI_USER" target="_blank" rel="noopener">
+                Donate on Ko-fi →
+              </a>
+            </p>
 
-              <p class="help-note">
-                This explains what information may be processed when you use the tracker.
-              </p>
-            </div>
-            <div class="help-pane" data-pane="donate">
-              <h4 class="help-pane-title">Donate</h4>
+            <p class="help-note">
+              Donations are optional and go directly to the developer.
+            </p>
+          </div>
 
-              <p>
-                Hey there. I am Roblify, the Developer of the Easter Bunny Tracker website. This is a website I love and
-                have passion for, as it makes Easter more fun for everyone with the ability to track the Easter Bunny as
-                he is
-                delivering eggs around the globe. Maintaining this website, alongside you using the website to track
-                requires me to pay money to keep the website up and running. Donating through Ko-fi would be a great
-                "Thank you"
-                message to me personally, and your donation would make maintaining the website less of a financial
-                burden,
-                more than you realize. ❤
-              </p>
+          <!-- CONTACT -->
+          <div class="help-pane" data-pane="contact">
+            <h4 class="help-pane-title">Contact</h4>
+            <p>
+              If you have any questions, concerns, or feedback regarding the Easter Bunny Tracker, you’re welcome to
+              reach out directly.
+            </p>
+            <p>
+              <a class="help-link" href="mailto:support@YOUREMAILHERE.com">
+                Email: support@easterbunnytracker.org
+              </a>
+            </p>
+            <p class="help-note">Please allow some time for a response.</p>
+          </div>
 
-              <p>
-                <a class="help-link" href="https://ko-fi.com/YOUR_KOFI_ACCOUNT_NAME" target="_blank" rel="noopener">
-                  Donate on Ko-fi →
-                </a>
-              </p>
-
-              <p class="help-note">
-                Donations are optional and go directly to the developer.
-              </p>
-            </div>
-            <div class="help-pane" data-pane="contact">
-              <h4 class="help-pane-title">Contact</h4>
-
-              <p>
-                If you have any questions, concerns, or feedback regarding the Easter Bunny Tracker,
-                you’re welcome to reach out directly.
-              </p>
-
-              <p>
-                <a class="help-link" href="mailto:youremail@here.com">
-                  Email: youremail@here.com
-                </a>
-              </p>
-
-              <p class="help-note">
-                Please allow some time for a response.
-              </p>
-            </div>
         </section>
       </div>
     </div>
@@ -212,6 +202,4 @@
 
   <script src="js/countdown.js" defer></script>
 </body>
-
-
 </html>
