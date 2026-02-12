@@ -119,6 +119,37 @@
             <h4 class="help-pane-title">Settings - Note: Setting changes save by default</h4>
 
             <p>
+              Toggle a more cinematic camera view while locked to the Bunny (zoomed in and angled, tracking from the
+              side).
+            </p>
+
+            <button id="cinematicCamBtn" type="button" class="settings-button" aria-pressed="false">
+              Camera Angle: Default
+            </button>
+
+            <p class="help-note">
+              This only affects the camera when “Lock to Bunny” is enabled.
+            </p>
+
+            <div id="cineOffsetWrap" class="settings-slider" hidden>
+              <div class="settings-slider-head">
+                <span>Side Tracking Offset:</span>
+                <span id="cineOffsetVal">30°</span>
+              </div>
+
+              <input id="cineOffsetSlider" type="range" min="0" max="180" step="1" value="30" />
+
+              <p class="help-note" style="margin-top:10px;">
+                Adjust how far “to the side” the camera tracks from the Bunny’s travel direction.
+                0° = directly behind, 90° = perfect side view, 180° = looking from the front.
+              </p>
+            </div>
+
+            <br>
+
+            <h4 class="help-pane-title">Settings - Note: Setting changes save by default</h4>
+
+            <p>
               Control background music for the Easter Bunny Tracker.
             </p>
 
@@ -196,19 +227,11 @@
             <h4 class="help-pane-title">Donate</h4>
 
             <p>
-              Hey there. I am Roblify, the Developer of the Easter Bunny Tracker website. This is a website I love and
-              have passion for, as it makes Easter more fun for everyone with the ability to track the Easter Bunny as
-              he is
-              delivering eggs around the globe. Maintaining this website, alongside you using the website to track
-              requires me to pay money to keep the website up and running. Donating through Ko-fi would be a great
-              "Thank you"
-              message to me personally. Your donation would make a positive impact on maintaining the website and make
-              it less of a financial burden,
-              more than you realize. ❤
+              YOUR OWN DONATION MESSAGE HERE
             </p>
 
             <p>
-              <a class="help-link" href="https://ko-fi.com/YOUR_KOFI_ACCOUNT_NAME" target="_blank" rel="noopener">
+              <a class="help-link" href="https://ko-fi.com/YOUR_KOFI_USERNAME" target="_blank" rel="noopener">
                 Donate on Ko-fi →
               </a>
             </p>
@@ -226,8 +249,8 @@
             </p>
 
             <p>
-              <a class="help-link" href="mailto:youremail@here.com">
-                Email: youremail@here.com
+              <a class="help-link" href="mailto:YOUREMAILADDRESS@HERE.com">
+                Email: support@easterbunnytracker.org
               </a>
             </p>
 
@@ -272,7 +295,6 @@
     🔓 Unlock Camera
   </button>
 </body>
-
 
 
 </html>
