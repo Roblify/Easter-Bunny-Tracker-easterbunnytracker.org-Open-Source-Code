@@ -4,7 +4,6 @@
 // CONFIG
 // =====================
 const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY"; // <-- put your Mapbox token here
-const WEATHERAPI_KEY = "YOUR_WEATHERAPI_KEY"; // <-- put your WeatherAPI token here
 const _IPT = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here
 
 const BASKET_START_DR = 77;
@@ -16,7 +15,8 @@ const TAKEOFF_DR = 76;
 const PRE_STATUS_MAX_DR = 75;
 
 // Camera settings (in Mapbox zoom levels)
-const LOCKED_ZOOM = 5.2;
+const LOCKED_ZOOM = 5.2;          // zoom used at DR 76+
+const LOCKED_ZOOM_PRE = 3.5;      // zoom used before DR 76
 const UNLOCKED_MIN_ZOOM = 0.1;
 const UNLOCKED_MAX_ZOOM = 8.0;
 
@@ -24,8 +24,6 @@ const UNLOCKED_MAX_ZOOM = 8.0;
 const CINEMATIC_ZOOM_DEFAULT = 6;
 const CINEMATIC_LOCKED_PITCH = 67;
 const CINEMATIC_SIDE_OFFSET_DEFAULT_DEG = 30;
-
-const STARTUP_GRACE_SEC = 20;
 
 const STANDARD_STYLE = "mapbox://styles/mapbox/standard";
 const SATELLITE_STYLE = "mapbox://styles/mapbox/standard-satellite";
@@ -98,6 +96,7 @@ let mapDimensionMode =
 
 // Session-only state
 let isDelivering = false; // true only while the Bunny is stopped & delivering
+let currentSegDR = null;  // DR of the current segment's stop/destination (null = unknown)
 
 // =====================
 // GENERIC HELPERS
@@ -195,30 +194,6 @@ function findClosestStopByLocation(stops, lat, lon) {
     }
 
     return best;
-}
-
-// =====================
-// WEATHER
-// =====================
-function weatherCodeToText(code) {
-    const c = Number(code);
-    if (!Number.isFinite(c)) return "Unknown conditions";
-
-    if (c === 0) return "Clear sky";
-    if (c === 1 || c === 2) return "Mostly clear";
-    if (c === 3) return "Overcast";
-    if (c === 45 || c === 48) return "Foggy";
-    if (c === 51 || c === 53 || c === 55) return "Light drizzle";
-    if (c === 56 || c === 57) return "Freezing drizzle";
-    if (c === 61 || c === 63 || c === 65) return "Rain";
-    if (c === 66 || c === 67) return "Freezing rain";
-    if (c === 71 || c === 73 || c === 75) return "Snow";
-    if (c === 77) return "Snow grains";
-    if (c === 80 || c === 81 || c === 82) return "Rain showers";
-    if (c === 85 || c === 86) return "Snow showers";
-    if (c === 95) return "Thunderstorm";
-    if (c === 96 || c === 99) return "Thunderstorm with hail";
-    return "Unknown conditions";
 }
 
 // =====================
@@ -380,34 +355,6 @@ function deliveryEndTime(stop) {
 }
 
 // =====================
-// WEATHER TEXT FIT
-// Shrinks #cityWeather font size until it fits its container.
-// Defined here (module scope) so it's only created once.
-// =====================
-function fitCityWeatherText() {
-    const el = document.getElementById("cityWeather");
-    if (!el) return;
-
-    // Reset font size before measuring
-    el.style.fontSize = "";
-
-    const parent = el.closest(".city-panel-row");
-    if (!parent) return;
-
-    const label = parent.querySelector("span:first-child");
-    const labelWidth = label ? label.offsetWidth : 0;
-    const availableWidth = parent.offsetWidth - labelWidth - 12; // 12px gap
-
-    let fontSize = 12.5;
-    el.style.fontSize = fontSize + "px";
-
-    while (el.scrollWidth > availableWidth && fontSize > 8) {
-        fontSize -= 0.5;
-        el.style.fontSize = fontSize + "px";
-    }
-}
-
-// =====================
 // MAIN INIT (MAPBOX)
 // =====================
 (async function init() {
@@ -418,11 +365,13 @@ function fitCityWeatherText() {
         }
 
         // ADD AN IGNORE BLOCK TO THIS SECTION IF YOU WANT TO GAIN ACCESS TO TRACKER FOR TESTING PURPOSES
+        /*
         const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
         if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
+        */
 
         // Show initial "Loading..." if element exists
         const statDurationEl = $("statDuration");
@@ -714,84 +663,8 @@ function fitCityWeatherText() {
         // Live city data state
         let currentCityStop = null;
         let currentCityTimezone = null;
-        let currentCityWeatherText = null;
-        let currentCityWeatherFetchPromise = null;
         let lastSegMode = null;
         let lastSegToIndex = null;
-
-        async function fetchCityLiveWeather(stop) {
-            if (!stop || !WEATHERAPI_KEY) return null;
-
-            // Reuse in-flight request if we're already fetching for this stop
-            if (currentCityWeatherFetchPromise && currentCityStop === stop) {
-                return currentCityWeatherFetchPromise;
-            }
-
-            const lat = stop.Latitude;
-            const lon = stop.Longitude;
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-                return null;
-            }
-
-            // WeatherAPI "current weather" endpoint
-            const url =
-                `https://api.weatherapi.com/v1/current.json` +
-                `?key=${encodeURIComponent(WEATHERAPI_KEY)}` +
-                `&q=${encodeURIComponent(`${lat},${lon}`)}` +
-                `&aqi=no`;
-
-            currentCityWeatherFetchPromise = (async () => {
-                try {
-                    const res = await fetch(url, { cache: "no-store" });
-                    if (!res.ok) throw new Error(`weather HTTP ${res.status}`);
-
-                    const data = await res.json();
-
-                    const tempC = Number(data?.current?.temp_c);
-                    const tempF = Number(data?.current?.temp_f);
-                    const rawDesc = data?.current?.condition?.text || "";
-                    const desc = rawDesc || "Unknown conditions";
-
-                    // Timezone preference: route's Timezone, then WeatherAPI tz_id
-                    if (typeof stop.Timezone === "string" && stop.Timezone.trim()) {
-                        currentCityTimezone = stop.Timezone.trim();
-                    } else if (typeof data?.location?.tz_id === "string" && data.location.tz_id.trim()) {
-                        currentCityTimezone = data.location.tz_id.trim();
-                    } else {
-                        currentCityTimezone = null;
-                    }
-
-                    if (Number.isFinite(tempC) && Number.isFinite(tempF)) {
-                        currentCityWeatherText =
-                            `${tempC.toFixed(1)} °C / ${tempF.toFixed(1)} °F, ${desc}`;
-                    } else if (Number.isFinite(tempC)) {
-                        const f = (tempC * 9) / 5 + 32;
-                        currentCityWeatherText =
-                            `${tempC.toFixed(1)} °C / ${f.toFixed(1)} °F, ${desc}`;
-                    } else {
-                        currentCityWeatherText = desc || "Unknown";
-                    }
-
-                    return {
-                        timezone: currentCityTimezone,
-                        weatherText: currentCityWeatherText
-                    };
-                } catch (err) {
-                    console.warn("City weather fetch failed:", err);
-
-                    if (typeof stop.Timezone === "string" && stop.Timezone.trim()) {
-                        currentCityTimezone = stop.Timezone.trim();
-                    } else {
-                        currentCityTimezone = null;
-                    }
-
-                    currentCityWeatherText = "Unknown";
-                    return null;
-                }
-            })();
-
-            return currentCityWeatherFetchPromise;
-        }
 
         // Kick off IP-based location lookup (non-blocking)
         fetchViewerLocationFromIpInfo().then((loc) => {
@@ -997,6 +870,16 @@ function fitCityWeatherText() {
         // =====================
         let isLocked = true;
 
+        // Returns the appropriate locked zoom level based on the current segment's DR.
+        // DR < 76  → zoomed out (3.5) so the pre-journey area is more visible.
+        // DR >= 76 → normal delivery zoom (5.2).
+        function getLockedZoom() {
+            if (currentSegDR !== null && Number.isFinite(currentSegDR) && currentSegDR < TAKEOFF_DR) {
+                return LOCKED_ZOOM_PRE;
+            }
+            return LOCKED_ZOOM;
+        }
+
         function setLocked(nextLocked) {
             isLocked = !!nextLocked;
 
@@ -1026,7 +909,7 @@ function fitCityWeatherText() {
 
                     map.easeTo({
                         center: ll,
-                        zoom: useCine ? cinematicZoom : LOCKED_ZOOM,
+                        zoom: useCine ? cinematicZoom : getLockedZoom(),
                         // Only apply pitch/bearing in 3D mode
                         pitch: (use3d && useCine) ? CINEMATIC_LOCKED_PITCH : 0,
                         bearing: (use3d && useCine) ? cinematicBearing : 0,
@@ -1057,7 +940,7 @@ function fitCityWeatherText() {
 
             map.jumpTo({
                 center: ll,
-                zoom: useCine ? cinematicZoom : LOCKED_ZOOM,
+                zoom: useCine ? cinematicZoom : getLockedZoom(),
                 // Only apply pitch/bearing in 3D mode
                 pitch: (use3d && useCine) ? CINEMATIC_LOCKED_PITCH : 0,
                 bearing: (use3d && useCine) ? cinematicBearing : 0
@@ -1446,11 +1329,12 @@ function fitCityWeatherText() {
             }
 
             if (cityLocalTimeEl) {
-                if (currentCityTimezone) {
+                const tz = s.Timezone || null;
+                if (tz) {
                     const nowDate = new Date();
                     try {
                         cityLocalTimeEl.textContent = nowDate.toLocaleTimeString(undefined, {
-                            timeZone: currentCityTimezone,
+                            timeZone: tz,
                             hour: "numeric",
                             minute: "2-digit"
                         });
@@ -1461,50 +1345,17 @@ function fitCityWeatherText() {
                         });
                     }
                 } else {
-                    cityLocalTimeEl.textContent = "Loading…";
+                    cityLocalTimeEl.textContent = "Unknown";
                 }
             }
 
             if (cityWeatherEl) {
-                if (currentCityWeatherText) {
-                    cityWeatherEl.textContent = currentCityWeatherText;
-                    requestAnimationFrame(fitCityWeatherText);
+                if (s.WikipediaUrl) {
+                    cityWeatherEl.innerHTML =
+                        `<a href="${s.WikipediaUrl}" target="_blank" rel="noopener noreferrer">Wikipedia article ↗</a>`;
                 } else {
-                    cityWeatherEl.textContent = "Loading…";
+                    cityWeatherEl.textContent = "No article available";
                 }
-            }
-
-            if (currentCityStop === s && !currentCityWeatherText) {
-                fetchCityLiveWeather(s).then((info) => {
-                    if (!info) {
-                        if (cityWeatherEl) cityWeatherEl.textContent = "Unknown";
-                        if (cityLocalTimeEl && !currentCityTimezone) {
-                            cityLocalTimeEl.textContent = "Unknown";
-                        }
-                        return;
-                    }
-
-                    if (cityWeatherEl) {
-                        cityWeatherEl.textContent = info.weatherText || "Unknown";
-                        requestAnimationFrame(fitCityWeatherText);
-                    }
-
-                    if (cityLocalTimeEl && info.timezone) {
-                        const nowDate = new Date();
-                        try {
-                            cityLocalTimeEl.textContent = nowDate.toLocaleTimeString(undefined, {
-                                timeZone: info.timezone,
-                                hour: "numeric",
-                                minute: "2-digit"
-                            });
-                        } catch {
-                            cityLocalTimeEl.textContent = nowDate.toLocaleTimeString(undefined, {
-                                hour: "numeric",
-                                minute: "2-digit"
-                            });
-                        }
-                    }
-                });
             }
         }
 
@@ -1840,6 +1691,16 @@ function fitCityWeatherText() {
 
             const seg = findSegment(now);
 
+            // Update currentSegDR so getLockedZoom() always reflects the current phase.
+            // DR < 76  → zoomed out (3.5); DR >= 76 → normal zoom (5.2).
+            if (seg.mode === "stop") {
+                currentSegDR = Number(stops[seg.i]?.DR ?? null);
+            } else if (seg.mode === "travel") {
+                currentSegDR = Number(stops[seg.to]?.DR ?? null);
+            } else {
+                currentSegDR = null; // "pre" mode — treat as pre-journey (zoomed out)
+            }
+
             if (seg.mode === "travel") {
                 const isNewTravelSegment =
                     lastSegMode !== "travel" || lastSegToIndex !== seg.to;
@@ -1848,10 +1709,6 @@ function fitCityWeatherText() {
                     const nextStop = stops[seg.to];
                     if (nextStop) {
                         currentCityStop = nextStop;
-                        currentCityWeatherText = null;
-                        currentCityWeatherFetchPromise = null;
-
-                        fetchCityLiveWeather(nextStop);
                     }
                 }
 
@@ -2099,5 +1956,3 @@ function fitCityWeatherText() {
         if (el) el.textContent = "Error (see console)";
     }
 })();
-
-
