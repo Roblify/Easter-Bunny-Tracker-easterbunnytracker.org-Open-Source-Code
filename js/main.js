@@ -3,8 +3,8 @@
 // =====================
 // CONFIG
 // =====================
-const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY"; // <-- put your Mapbox token here
-const _IPT = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here
+const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY"; // <-- put your Mapbox token here (https://www.mapbox.com/)
+const _IPT = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here (https://ipinfo.io/)
 
 const BASKET_START_DR = 77;
 const CITY_PANEL_MIN_DR = 77;
@@ -1956,4 +1956,5 @@ function deliveryEndTime(stop) {
         if (el) el.textContent = "Error (see console)";
     }
 })();
+
 
