@@ -877,6 +877,9 @@ function deliveryEndTime(stop) {
             if (currentSegDR !== null && Number.isFinite(currentSegDR) && currentSegDR < TAKEOFF_DR) {
                 return LOCKED_ZOOM_PRE;
             }
+            if (currentSegDR !== null && Number.isFinite(currentSegDR) && currentSegDR === FINAL_DR) {
+                return LOCKED_ZOOM_PRE;
+            }
             return LOCKED_ZOOM;
         }
 
