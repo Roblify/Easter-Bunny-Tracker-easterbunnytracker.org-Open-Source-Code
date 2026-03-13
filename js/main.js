@@ -16,7 +16,7 @@ const TAKEOFF_DR = 76;
 const PRE_STATUS_MAX_DR = 75;
 
 // Camera settings (in Mapbox zoom levels)
-const LOCKED_ZOOM = 4.4;
+const LOCKED_ZOOM = 5;
 const UNLOCKED_MIN_ZOOM = 0.1;
 const UNLOCKED_MAX_ZOOM = 8.0;
 
@@ -2099,3 +2099,4 @@ function fitCityWeatherText() {
         if (el) el.textContent = "Error (see console)";
     }
 })();
+
