@@ -1,7 +1,7 @@
 (() => {
-  // April 5, 2026 @ 2:00 AM EDT
-  // EDT is UTC-4, so this is 2026-04-05T06:00:00Z
-  const TARGET_UTC_MS = Date.UTC(2026, 3, 5, 6, 0, 0);
+  // April 4, 2026 @ 2:00 AM EDT
+  // EDT is UTC-4, so this is 2026-04-04T06:00:00Z
+  const TARGET_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
 
   const elD = document.getElementById("d");
   const elH = document.getElementById("h");
@@ -110,3 +110,4 @@
   });
 
 })();
+
