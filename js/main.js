@@ -5,6 +5,7 @@
 // =====================
 const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY"; // <-- put your Mapbox token here
 const WEATHERAPI_KEY = "YOUR_WEATHERAPI_KEY"; // <-- put your WeatherAPI token here
+const _IPT = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here
 
 const BASKET_START_DR = 77;
 const CITY_PANEL_MIN_DR = 77;
@@ -15,7 +16,7 @@ const TAKEOFF_DR = 76;
 const PRE_STATUS_MAX_DR = 75;
 
 // Camera settings (in Mapbox zoom levels)
-const LOCKED_ZOOM = 4.7;
+const LOCKED_ZOOM = 4.4;
 const UNLOCKED_MIN_ZOOM = 0.1;
 const UNLOCKED_MAX_ZOOM = 8.0;
 
@@ -89,6 +90,12 @@ let cinematicZoom =
         ? Math.max(1, Math.min(10, Number(initialSettings.cinematicZoom)))
         : CINEMATIC_ZOOM_DEFAULT;
 
+// Map dimension mode persists — default is "2d"
+let mapDimensionMode =
+    (initialSettings.mapDimensionMode === "2d" || initialSettings.mapDimensionMode === "3d")
+        ? initialSettings.mapDimensionMode
+        : "2d";
+
 // Session-only state
 let isDelivering = false; // true only while the Bunny is stopped & delivering
 
@@ -149,7 +156,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 // =====================
 async function fetchViewerLocationFromIpInfo() {
     try {
-        const res = await fetch("https://ipinfo.io/json?token=YOUR_TOKEN_HERE", { // <-- Put your ipinfo.io token here
+        const res = await fetch(`https://ipinfo.io/json?token=${_IPT}`, {
             cache: "no-store"
         });
         if (!res.ok) throw new Error(`ipinfo.io failed (${res.status})`);
@@ -373,6 +380,34 @@ function deliveryEndTime(stop) {
 }
 
 // =====================
+// WEATHER TEXT FIT
+// Shrinks #cityWeather font size until it fits its container.
+// Defined here (module scope) so it's only created once.
+// =====================
+function fitCityWeatherText() {
+    const el = document.getElementById("cityWeather");
+    if (!el) return;
+
+    // Reset font size before measuring
+    el.style.fontSize = "";
+
+    const parent = el.closest(".city-panel-row");
+    if (!parent) return;
+
+    const label = parent.querySelector("span:first-child");
+    const labelWidth = label ? label.offsetWidth : 0;
+    const availableWidth = parent.offsetWidth - labelWidth - 12; // 12px gap
+
+    let fontSize = 12.5;
+    el.style.fontSize = fontSize + "px";
+
+    while (el.scrollWidth > availableWidth && fontSize > 8) {
+        fontSize -= 0.5;
+        el.style.fontSize = fontSize + "px";
+    }
+}
+
+// =====================
 // MAIN INIT (MAPBOX)
 // =====================
 (async function init() {
@@ -382,14 +417,12 @@ function deliveryEndTime(stop) {
             return;
         }
 
-        // CHANGE LATER IF YOU WANT PRE-START REDIRECT
-        /*
-        const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 5, 6, 0, 0);
+        // ADD AN IGNORE BLOCK TO THIS SECTION IF YOU WANT TO GAIN ACCESS TO TRACKER FOR TESTING PURPOSES
+        const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
         if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
-        */
 
         // Show initial "Loading..." if element exists
         const statDurationEl = $("statDuration");
@@ -412,44 +445,88 @@ function deliveryEndTime(stop) {
             zoom: LOCKED_ZOOM,
             bearing: 0,
             pitch: 0,
-            projection: "globe"
+            projection: mapDimensionMode === "3d" ? "globe" : "mercator"
         });
 
-        map.on("style.load", () => {
+        // =====================
+        // APPLY MAP DIMENSION MODE (3D/2D)
+        // Called after style loads and whenever the mode is toggled.
+        // =====================
+        function applyMapDimensionMode() {
+            if (mapDimensionMode === "3d") {
+                map.setProjection("globe");
 
-            // Globe projection must always be re-applied after style changes
-            map.setProjection("globe");
-
-            if (currentStyle === "standard") {
-                // Built-in dusk lighting
-                map.setConfigProperty("basemap", "lightPreset", "dusk");
-
-                // Starry dusk sky
-                map.setFog({
-                    range: [0.6, 8],
-                    color: "rgb(186, 210, 235)",
-                    "high-color": "rgb(36, 92, 223)",
-                    "horizon-blend": 0.02,
-                    "space-color": "rgb(11, 11, 25)",
-                    "star-intensity": 0.6
-                });
+                if (currentStyle === "standard") {
+                    map.setFog({
+                        range: [0.6, 8],
+                        color: "rgb(186, 210, 235)",
+                        "high-color": "rgb(36, 92, 223)",
+                        "horizon-blend": 0.02,
+                        "space-color": "rgb(11, 11, 25)",
+                        "star-intensity": 0.6
+                    });
+                } else {
+                    const SPACE = "rgb(5, 5, 12)";
+                    map.setFog({
+                        range: [0.8, 10],
+                        color: SPACE,
+                        "high-color": SPACE,
+                        "horizon-blend": 0,
+                        "space-color": SPACE,
+                        "star-intensity": 0.6
+                    });
+                }
             } else {
-                const SPACE = "rgb(5, 5, 12)";
+                // 2D: flat mercator, no fog/atmosphere, pitch reset to 0
+                map.setProjection("mercator");
+                map.setFog(null);
 
-                map.setFog({
-                    range: [0.8, 10],
-                    color: SPACE,
-                    "high-color": SPACE,
-                    "horizon-blend": 0,
-                    "space-color": SPACE,
-                    "star-intensity": 0.6
-                });
+                // If locked camera had a pitch, flatten it
+                if (isLocked) {
+                    map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+                }
+            }
+        }
+
+        map.on("style.load", () => {
+            // Apply current dimension mode after every style change
+            applyMapDimensionMode();
+
+            if (currentStyle === "standard" && mapDimensionMode === "3d") {
+                map.setConfigProperty("basemap", "lightPreset", "dusk");
             }
         });
 
         // Wait for map load before adding markers or using setMinZoom/setMaxZoom
         await new Promise((resolve) => map.on("load", resolve));
 
+        // =====================
+        // MAP DIMENSION (3D / 2D) BUTTON
+        // =====================
+        const mapDimensionBtn = document.getElementById("mapDimensionBtn");
+
+        function updateMapDimensionButton() {
+            if (!mapDimensionBtn) return;
+            const is3d = (mapDimensionMode === "3d");
+            mapDimensionBtn.setAttribute("aria-pressed", String(is3d));
+            mapDimensionBtn.textContent = is3d ? "Map Mode: 3D" : "Map Mode: 2D";
+        }
+
+        function toggleMapDimension() {
+            mapDimensionMode = (mapDimensionMode === "3d") ? "2d" : "3d";
+            saveSettings({ mapDimensionMode });
+            updateMapDimensionButton();
+            applyMapDimensionMode();
+        }
+
+        if (mapDimensionBtn) {
+            updateMapDimensionButton();
+            mapDimensionBtn.addEventListener("click", toggleMapDimension);
+        }
+
+        // =====================
+        // MAP STYLE BUTTON
+        // =====================
         const mapStyleBtn = document.getElementById("mapStyleBtn");
 
         function updateMapStyleButton() {
@@ -945,12 +1022,14 @@ function deliveryEndTime(stop) {
                     const ll = bunnyMarker.getLngLat();
 
                     const useCine = cinematicCamEnabled;
+                    const use3d = (mapDimensionMode === "3d");
 
                     map.easeTo({
                         center: ll,
                         zoom: useCine ? cinematicZoom : LOCKED_ZOOM,
-                        pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
-                        bearing: useCine ? cinematicBearing : 0,
+                        // Only apply pitch/bearing in 3D mode
+                        pitch: (use3d && useCine) ? CINEMATIC_LOCKED_PITCH : 0,
+                        bearing: (use3d && useCine) ? cinematicBearing : 0,
                         duration: 800
                     });
                 }
@@ -974,12 +1053,14 @@ function deliveryEndTime(stop) {
             const ll = bunnyMarker.getLngLat();
 
             const useCine = cinematicCamEnabled;
+            const use3d = (mapDimensionMode === "3d");
 
             map.jumpTo({
                 center: ll,
                 zoom: useCine ? cinematicZoom : LOCKED_ZOOM,
-                pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
-                bearing: useCine ? cinematicBearing : 0
+                // Only apply pitch/bearing in 3D mode
+                pitch: (use3d && useCine) ? CINEMATIC_LOCKED_PITCH : 0,
+                bearing: (use3d && useCine) ? cinematicBearing : 0
             });
         }
 
@@ -1047,18 +1128,12 @@ function deliveryEndTime(stop) {
                 return Number(stops[i]?.DR);
             }
 
-            // For DR>=76 we treat:
-            // - "approach/arrive window" as [UnixArrivalArrival .. UnixArrival)
-            // - "deliver window" as [UnixArrival .. UnixArrivalDeparture)
             function stopApproachEnd(i) {
                 const s = stops[i];
                 const aA = Number(s.UnixArrivalArrival);
                 const a = Number(s.UnixArrival);
 
-                // If UnixArrival is valid and after ArrivalArrival, use it as the end of "approach"
                 if (Number.isFinite(aA) && Number.isFinite(a) && a > aA) return a;
-
-                // Fallback: no distinct arrival moment -> treat approach as 0 seconds long
                 return aA;
             }
 
@@ -1068,27 +1143,20 @@ function deliveryEndTime(stop) {
                 const a = Number(s.UnixArrival);
                 const d = Number(s.UnixArrivalDeparture);
 
-                // normal preference order
                 let end =
                     (Number.isFinite(d) ? d :
                         (Number.isFinite(a) ? a : aA));
 
-                // IMPORTANT: if this is DR 76 and it's effectively a 0-second stop,
-                // create a small "takeoff window" so segment math doesn't collapse.
                 const dr = Number(s.DR);
                 if (Number.isFinite(dr) && dr === TAKEOFF_DR && Number.isFinite(aA)) {
                     if (!Number.isFinite(end) || end <= aA + 0.5) {
-                        end = aA + 8; // 8s window feels nice; change if you want
+                        end = aA + 8;
                     }
                 }
 
                 return end;
             }
 
-            // -----------------------------
-            // PART A: DR <= 75 "status checkpoints"
-            // (ONLY before takeoff moment)
-            // -----------------------------
             const allowPreTimeline =
                 !(Number.isFinite(TAKEOFF_ARRIVAL) && now >= (TAKEOFF_ARRIVAL - EPS));
 
@@ -1115,9 +1183,6 @@ function deliveryEndTime(stop) {
                 if (Number.isFinite(firstA) && now < firstA - EPS) return { mode: "pre" };
             }
 
-            // -----------------------------
-            // PART B: DR >= 76 logic
-            // -----------------------------
             for (let i = 0; i < n; i++) {
                 const s = stops[i];
 
@@ -1128,15 +1193,13 @@ function deliveryEndTime(stop) {
                 const isPostTakeoff = Number.isFinite(dr) && dr >= TAKEOFF_DR;
 
                 if (isPostTakeoff) {
-                    const approachEnd = stopApproachEnd(i); // usually UnixArrival
-                    const deliverEnd = stopDeliverEnd(i);   // usually UnixArrivalDeparture
+                    const approachEnd = stopApproachEnd(i);
+                    const deliverEnd = stopDeliverEnd(i);
 
-                    // Stop window = from ArrivalArrival until Departure (covers "arrived" + "delivering")
                     if (now >= aA - EPS && now < deliverEnd - EPS) {
                         return { mode: "stop", i };
                     }
 
-                    // Travel window = from this stop’s departure to next stop’s ArrivalArrival
                     if (i + 1 < n) {
                         const nextA = Number(stops[i + 1].UnixArrivalArrival);
                         if (Number.isFinite(nextA)) {
@@ -1147,8 +1210,6 @@ function deliveryEndTime(stop) {
                         }
                     }
                 } else {
-                    // Pre-takeoff fallback behavior for any stray DR<76 records:
-                    // Stop window uses ArrivalArrival->Departure like before
                     const d = Number(s.UnixArrivalDeparture);
                     const end = (Number.isFinite(d) && d > aA) ? d : aA;
 
@@ -1195,7 +1256,7 @@ function deliveryEndTime(stop) {
             if (seg.mode === "travel") {
                 const to = stops[seg.to];
                 const dr = Number(to?.DR);
-                return Number.isFinite(dr) && dr < TAKEOFF_DR; // TAKEOFF_DR is 76
+                return Number.isFinite(dr) && dr < TAKEOFF_DR;
             }
 
             if (seg.mode === "stop") {
@@ -1207,9 +1268,6 @@ function deliveryEndTime(stop) {
             return false;
         }
 
-        // ETA override:
-        // Before TAKEOFF_ARRIVAL (DR 76), statEta counts down to DR 76.
-        // After that, statEta counts down to "next" like normal.
         function etaForHUD(now, normalEtaSeconds) {
             if (Number.isFinite(TAKEOFF_ARRIVAL) && now < TAKEOFF_ARRIVAL) {
                 return TAKEOFF_ARRIVAL - now;
@@ -1221,7 +1279,6 @@ function deliveryEndTime(stop) {
             const el = $("statDuration");
             if (!el) return;
 
-            // If the row is hidden, don't waste work or set any text
             if (statDurationRow && statDurationRow.style.display === "none") {
                 return;
             }
@@ -1231,7 +1288,6 @@ function deliveryEndTime(stop) {
                 return;
             }
 
-            // If we failed earlier
             if (viewerEtaError) {
                 if (!el.textContent || el.textContent === "Loading...") {
                     el.textContent = "Unknown";
@@ -1239,7 +1295,6 @@ function deliveryEndTime(stop) {
                 return;
             }
 
-            // Still resolving IP / closest stop
             if (!viewerClosestStop) {
                 return;
             }
@@ -1270,7 +1325,7 @@ function deliveryEndTime(stop) {
                 Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
 
             let brng = toDeg(Math.atan2(y, x));
-            brng = (brng + 360) % 360; // 0..360
+            brng = (brng + 360) % 360;
             return brng;
         }
 
@@ -1301,30 +1356,15 @@ function deliveryEndTime(stop) {
                 Math.cos(φ1) * Math.sin(φ2) -
                 Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
 
-            let brng = toDeg(Math.atan2(y, x)); // -180..+180
-            brng = (brng + 360) % 360;          // 0..360, 0 = North
+            let brng = toDeg(Math.atan2(y, x));
+            brng = (brng + 360) % 360;
 
             const labels = [
-                "North",
-                "North-East",
-                "East",
-                "South-East",
-                "South",
-                "South-West",
-                "West",
-                "North-West"
+                "North", "North-East", "East", "South-East",
+                "South", "South-West", "West", "North-West"
             ];
 
-            const arrows = [
-                "↑",  // North
-                "↗",  // NE
-                "→",  // E
-                "↘",  // SE
-                "↓",  // S
-                "↙",  // SW
-                "←",  // W
-                "↖"   // NW
-            ];
+            const arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
 
             const sector = Math.round(brng / 45) % 8;
             return {
@@ -1336,7 +1376,6 @@ function deliveryEndTime(stop) {
         function updateCityPanel(now, seg) {
             if (!cityPanel) return;
 
-            // Hide if journey complete
             if (Number.isFinite(FINAL_ARRIVAL) && now >= FINAL_ARRIVAL) {
                 cityPanel.hidden = true;
                 currentCityStop = null;
@@ -1344,7 +1383,6 @@ function deliveryEndTime(stop) {
                 return;
             }
 
-            // Decide which stop represents the "current city"
             let s = null;
 
             if (seg && seg.mode === "stop") {
@@ -1352,7 +1390,6 @@ function deliveryEndTime(stop) {
             } else if (seg && seg.mode === "travel") {
                 s = stops[seg.to];
             } else {
-                // PRE-JOURNEY (seg.mode === "pre") → show first stop
                 s = stops[0];
             }
 
@@ -1363,7 +1400,6 @@ function deliveryEndTime(stop) {
             }
 
             const dr = Number(s.DR);
-            // Only show for DR >= CITY_PANEL_MIN_DR
             if (!Number.isFinite(dr) || dr < CITY_PANEL_MIN_DR) {
                 cityPanel.hidden = true;
                 currentCityStop = null;
@@ -1373,7 +1409,6 @@ function deliveryEndTime(stop) {
             cityPanel.hidden = false;
             currentCityStop = s;
 
-            // Title: "Information about City"
             if (cityTitleEl) {
                 const city = s.City || "Unknown city";
                 cityTitleEl.textContent = `Information about: ${city}`;
@@ -1433,6 +1468,7 @@ function deliveryEndTime(stop) {
             if (cityWeatherEl) {
                 if (currentCityWeatherText) {
                     cityWeatherEl.textContent = currentCityWeatherText;
+                    requestAnimationFrame(fitCityWeatherText);
                 } else {
                     cityWeatherEl.textContent = "Loading…";
                 }
@@ -1448,7 +1484,10 @@ function deliveryEndTime(stop) {
                         return;
                     }
 
-                    if (cityWeatherEl) cityWeatherEl.textContent = info.weatherText || "Unknown";
+                    if (cityWeatherEl) {
+                        cityWeatherEl.textContent = info.weatherText || "Unknown";
+                        requestAnimationFrame(fitCityWeatherText);
+                    }
 
                     if (cityLocalTimeEl && info.timezone) {
                         const nowDate = new Date();
@@ -1528,7 +1567,7 @@ function deliveryEndTime(stop) {
         let musicEnabled =
             (typeof initialSettings.musicEnabled === "boolean")
                 ? initialSettings.musicEnabled
-                : true; // default: on
+                : true;
         let bgAudio = null;
         let musicResumePending = false;
 
@@ -1560,9 +1599,7 @@ function deliveryEndTime(stop) {
                 }, 1000);
             });
 
-            // ⬇⬇ IMPORTANT: don't autoplay if user has music off
             if (!musicEnabled) {
-                // Just keep the audio object ready; no play() call.
                 musicResumePending = false;
                 return;
             }
@@ -1627,9 +1664,7 @@ function deliveryEndTime(stop) {
             try {
                 const p = bgAudio.play();
                 if (p && typeof p.then === "function") {
-                    p.catch(() => {
-                        // ignore
-                    });
+                    p.catch(() => {});
                 }
             } catch (e) {
                 console.warn("Background music resume on interaction failed:", e);
@@ -1650,7 +1685,6 @@ function deliveryEndTime(stop) {
             });
         }
 
-        // Start with previously saved music setting (default: on)
         setMusicEnabled(musicEnabled);
         initBgMusic();
 
@@ -1721,9 +1755,8 @@ function deliveryEndTime(stop) {
                 cinematicCamEnabled = !cinematicCamEnabled;
                 saveSettings({ cinematicCamEnabled });
                 updateCinematicCamButton();
-                updateCinematicOffsetUI(); // show/hide slider
+                updateCinematicOffsetUI();
 
-                // If currently locked, immediately re-apply the camera style
                 if (isLocked) {
                     followBunnyIfLocked();
                 }
@@ -1764,7 +1797,7 @@ function deliveryEndTime(stop) {
         if (travelSpeedTypeBtn) {
             travelSpeedTypeBtn.addEventListener("click", () => {
                 speedUnitMode = (speedUnitMode === "mph") ? "kmh" : "mph";
-                saveSettings({ speedUnitMode });      // persist units
+                saveSettings({ speedUnitMode });
                 updateSpeedUnitButton();
             });
         }
@@ -1784,7 +1817,7 @@ function deliveryEndTime(stop) {
         if (streamerModeBtn) {
             streamerModeBtn.addEventListener("click", () => {
                 streamerModeEnabled = !streamerModeEnabled;
-                saveSettings({ streamerModeEnabled });   // persist
+                saveSettings({ streamerModeEnabled });
                 updateStreamerModeButton();
 
                 updateViewerLocationEta(Date.now() / 1000);
@@ -1801,7 +1834,7 @@ function deliveryEndTime(stop) {
         // TICK LOOP
         // =====================
         function tick() {
-            const now = Date.now() / 1000; // keep fractional seconds
+            const now = Date.now() / 1000;
 
             isDelivering = false;
 
@@ -1814,12 +1847,10 @@ function deliveryEndTime(stop) {
                 if (isNewTravelSegment) {
                     const nextStop = stops[seg.to];
                     if (nextStop) {
-                        // Reset cached weather state for the new destination
                         currentCityStop = nextStop;
                         currentCityWeatherText = null;
                         currentCityWeatherFetchPromise = null;
 
-                        // Kick off a live weather fetch for the destination city
                         fetchCityLiveWeather(nextStop);
                     }
                 }
@@ -1827,12 +1858,10 @@ function deliveryEndTime(stop) {
                 lastSegMode = "travel";
                 lastSegToIndex = seg.to;
             } else {
-                // Not traveling (pre or stop); just remember the mode
                 lastSegMode = seg.mode;
                 lastSegToIndex = null;
             }
 
-            // Always add baskets for completed stops, even after DR 1048
             for (const s of stops) {
                 if (now >= s.UnixArrivalDeparture) addBasketForStop(s);
                 else break;
@@ -1844,14 +1873,11 @@ function deliveryEndTime(stop) {
             if (journeyComplete) {
                 if (cityPanel) cityPanel.hidden = true;
 
-                // Park bunny at the final stop
                 updateBunnyPosition(finalStop.Longitude, finalStop.Latitude);
 
-                // Hide Status and Arriving in rows
                 if (statStatusRow) statStatusRow.style.display = "none";
                 if (statEtaRow) statEtaRow.style.display = "none";
 
-                // Freeze eggs/carrots at final values
                 updateHUD({
                     status: "",
                     lastText: cityLabel(finalStop),
@@ -1906,13 +1932,10 @@ function deliveryEndTime(stop) {
                 const drNow = Number(s.DR);
 
                 if (Number.isFinite(drNow) && drNow === TAKEOFF_DR) {
-                    // Treat DR 76 as "taking off / first hop" instead of "delivering"
                     isDelivering = false;
 
-                    // Keep bunny exactly on the takeoff point during the takeoff window
                     updateBunnyPosition(s.Longitude, s.Latitude);
 
-                    // Count down to the first delivery hop (next stop) if it exists
                     const nextA = next ? Number(next.UnixArrivalArrival) : NaN;
                     const eta = (Number.isFinite(nextA)) ? (nextA - now) : NaN;
 
@@ -1927,7 +1950,6 @@ function deliveryEndTime(stop) {
                         carrots: 0
                     });
 
-                    // Make the lock feel “real” at the moment of takeoff
                     followBunnyIfLocked();
                     currentTravelDirection = null;
                     updateViewerLocationEta(now);
@@ -1936,7 +1958,6 @@ function deliveryEndTime(stop) {
                 }
                 const preTakeoffStop = Number.isFinite(drNow) && drNow < TAKEOFF_DR;
 
-                // If DR < 76, NEVER deliver (keeps Egg FX off too)
                 isDelivering = !preTakeoffStop;
 
                 updateBunnyPosition(s.Longitude, s.Latitude);
@@ -1945,7 +1966,7 @@ function deliveryEndTime(stop) {
                     updateHUD({
                         status: s.City || "Preparing…",
                         lastText: "N/A",
-                        etaSeconds: etaForHUD(now, NaN),      // etaForHUD will return TAKEOFF_ARRIVAL-now while now<TAKEOFF_ARRIVAL
+                        etaSeconds: etaForHUD(now, NaN),
                         stopRemainingSeconds: NaN,
                         speedKmh: NaN,
                         speedMph: NaN,
@@ -2024,7 +2045,6 @@ function deliveryEndTime(stop) {
                     ? cityLabel(to)
                     : cityOnly(to);
 
-                // If DR < 76: just show label (no "Heading to:")
                 const statusText = preTakeoffTravel
                     ? (to.City || "Preparing…")
                     : `Heading to: ${destinationLabelForStatus}`;
@@ -2079,4 +2099,3 @@ function deliveryEndTime(stop) {
         if (el) el.textContent = "Error (see console)";
     }
 })();
-
