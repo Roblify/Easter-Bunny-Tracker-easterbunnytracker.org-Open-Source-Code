@@ -441,7 +441,7 @@ function deliveryEndTime(stop) {
             // Apply current dimension mode after every style change
             applyMapDimensionMode();
 
-            if (currentStyle === "standard" && mapDimensionMode === "3d") {
+            if (currentStyle === "standard") {
                 map.setConfigProperty("basemap", "lightPreset", "dusk");
             }
         });
@@ -1956,3 +1956,4 @@ function deliveryEndTime(stop) {
         if (el) el.textContent = "Error (see console)";
     }
 })();
+
