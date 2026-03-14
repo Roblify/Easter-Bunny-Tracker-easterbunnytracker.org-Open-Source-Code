@@ -26,7 +26,7 @@
 const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY"; // <-- put your Mapbox token here (https://www.mapbox.com/)
 const _IPT         = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here (https://ipinfo.io/)
 
-const ROUTE_FILE = "data/route.json";
+const ROUTE_FILE = "data/route-testing.json";
 
 // Delivery-readiness thresholds (DR values)
 const BASKET_START_DR   = 77;
@@ -477,11 +477,13 @@ function findClosestStopByLocation(stops, lat, lon) {
         // ── Pre-journey gate ──────────────────────────────────────────────────
         // Redirects anyone who visits before April 4 2026 at 06:00 UTC back to index.html.
         // Remove or disable this once the journey is live.
+        /*
         const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
         if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
+        */
 
         if (typeof mapboxgl === "undefined") {
             console.error("Mapbox GL JS is undefined. Make sure its script is loaded.");
