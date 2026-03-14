@@ -114,85 +114,85 @@
               to improve accuracy, performance, and presentation.
             </p>
           </div>
-          <div class="help-pane" data-pane="settings">
-            <h4 class="help-pane-title">Settings - Note: Setting changes save by default</h4>
+<div class="help-pane" data-pane="settings">
+            <h4 class="help-pane-title">Settings</h4>
+            <p class="help-note" style="margin-top:0;">All changes are saved automatically.</p>
 
-            <p>
-              Toggle a more cinematic camera view while locked to the Bunny (zoomed in and angled, tracking from the
-              side).
-            </p>
+            <!-- ── CAMERA ───────────────────────────────────────────── -->
+            <h5 class="settings-section-title">📷 Camera</h5>
+
+            <p>Toggle between a cinematic side-tracking view and the default overhead camera while locked to the Bunny.</p>
 
             <button id="cinematicCamBtn" type="button" class="settings-button" aria-pressed="false">
               Camera Angle: Default
             </button>
 
-            <p class="help-note">
-              This only affects the camera when "Lock to Bunny" is enabled.
-            </p>
+            <p class="help-note">Only applies when "Lock to Bunny" is enabled.</p>
 
             <div id="cineOffsetWrap" class="settings-slider" hidden>
               <div class="settings-slider-head">
                 <span>Side Tracking Offset:</span>
                 <span id="cineOffsetVal">30°</span>
               </div>
-
               <input id="cineOffsetSlider" type="range" min="0" max="180" step="1" value="30" />
-
-              <p class="help-note" style="margin-top:10px;">
-                Adjust how far "to the side" the camera tracks from the Bunny's travel direction.
-                0° = directly behind, 90° = perfect side view, 180° = looking from the front.
+              <p class="help-note" style="margin-top:8px;">
+                0° = directly behind &nbsp;·&nbsp; 90° = side view &nbsp;·&nbsp; 180° = looking from the front.
               </p>
+            </div>
+
+            <div id="cineZoomWrap" class="settings-slider" hidden>
+              <div class="settings-slider-head">
+                <span>Cinematic Zoom:</span>
+                <span id="cineZoomVal">6</span>
+              </div>
+              <input id="cineZoomSlider" type="range" min="1" max="10" step="0.1" value="6" />
             </div>
 
             <hr>
 
-            <p>
-              Control background music for the Easter Bunny Tracker.
-            </p>
+            <!-- ── MAP ──────────────────────────────────────────────── -->
+            <h5 class="settings-section-title">🗺️ Map</h5>
+
+            <p>Switch between a flat 2D Mercator map and a 3D globe with atmosphere and star effects.</p>
+
+            <button id="mapDimensionBtn" type="button" class="settings-button" aria-pressed="false">
+              Map Mode: 2D
+            </button>
+
+            <p style="margin-top:14px;">Switch between the Standard and Satellite map styles.</p>
+
+            <button id="mapStyleBtn" type="button" class="settings-button" aria-pressed="true">
+              Map Style: Satellite
+            </button>
+
+            <hr>
+
+            <!-- ── AUDIO ─────────────────────────────────────────────── -->
+            <h5 class="settings-section-title">🎵 Audio</h5>
+
+            <p>Toggle background music. Some browsers may require a page interaction before audio can start.</p>
 
             <button id="musicToggleBtn" type="button" class="settings-button" aria-pressed="true">
               Music: On
             </button>
 
-            <p class="help-note">
-              Some browsers may require you to interact with the page before music can start playing.
-            </p>
-
             <hr>
 
-            <p>Enable kilometer (km/h) or mile (mph) mode in determining traveling speed.</p>
+            <!-- ── HUD ───────────────────────────────────────────────── -->
+            <h5 class="settings-section-title">📊 HUD</h5>
+
+            <p>Choose whether travel speed is shown in miles per hour or kilometres per hour.</p>
 
             <button id="travelSpeedTypeBtn" type="button" class="settings-button" aria-pressed="true">
-              Distance converted in: MPH
+              Speed Unit: MPH
             </button>
 
-            <hr>
+            <p style="margin-top:14px;">
+              Streamer Mode hides the "Bunny arrives at your location in about…" estimate, preventing viewers of your
+              broadcast from inferring your location.
+            </p>
 
-            <p>Toggle the map style to your preferance, standard or satellite. By default, standard is the map style,
-              but satellite is a choice for your viewing experience</p>
-
-            <button id="mapStyleBtn" type="button" class="settings-button" aria-pressed="true">
-              Map style: Standard
-            </button>
-
-            <hr>
-
-            <p>Toggle between 3D globe view and a flat 2D map. In 3D mode the Earth is rendered as a globe with
-              atmosphere and star effects. In 2D mode a flat Mercator projection is used instead. The cinematic
-              camera angle is only available in 3D mode.</p>
-
-            <button id="mapDimensionBtn" type="button" class="settings-button" aria-pressed="true">
-              Map Mode: 2D
-            </button>
-
-            <hr>
-
-            <p>Enable streamer mode to hide the "Easter Bunny will arrive at your location in about" feature from
-              viewers. We recommend enabling this if you are re-broadcasting this tracker. This is in order to protect
-              yourself by revoking the ability for viewers of your broadcast to determine your location through the
-              distance fetching feature.</p>
-
-            <button id="streamerModeBtn" type="button" class="settings-button" aria-pressed="true">
+            <button id="streamerModeBtn" type="button" class="settings-button" aria-pressed="false">
               Streamer Mode: Disabled
             </button>
           </div>
