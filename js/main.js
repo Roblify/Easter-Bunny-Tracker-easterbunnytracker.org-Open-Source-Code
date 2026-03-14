@@ -24,7 +24,7 @@
  * ============================================================================= */
 
 const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY"; // <-- put your Mapbox token here (https://www.mapbox.com/)
-const _IPT =         atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here (https://ipinfo.io/)
+const _IPT         = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token here (https://ipinfo.io/)
 
 const ROUTE_FILE = "data/route.json";
 
