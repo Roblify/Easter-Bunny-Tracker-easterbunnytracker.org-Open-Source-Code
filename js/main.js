@@ -48,7 +48,7 @@ const CINEMATIC_SIDE_OFFSET_DEFAULT_DEG = 30;
 
 // Map styles
 const STANDARD_STYLE  = "mapbox://styles/mapbox/standard";
-const SATELLITE_STYLE = "mapbox://styles/mapbox/standard-satellite";
+const SATELLITE_STYLE = "mapbox://styles/theroblify/cmmqvyxfl00as01sugspqf5d5";
 
 const MUSIC_VOLUME = 0.2;
 
@@ -477,13 +477,11 @@ function findClosestStopByLocation(stops, lat, lon) {
         // ── Pre-journey gate ──────────────────────────────────────────────────
         // Redirects anyone who visits before April 4 2026 at 06:00 UTC back to index.html.
         // Remove or disable this once the journey is live.
-        /*
         const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
         if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
-        */
 
         if (typeof mapboxgl === "undefined") {
             console.error("Mapbox GL JS is undefined. Make sure its script is loaded.");
@@ -512,6 +510,12 @@ function findClosestStopByLocation(stops, lat, lon) {
             pitch:      0,
             projection: mapDimensionMode === "3d" ? "globe" : "mercator"
         });
+
+        // ── Session state ─────────────────────────────────────────────────────
+        // NOTE: isLocked is declared HERE, before applyMapDimensionMode, so that
+        // function can safely reference it when style.load fires early.
+
+        let isLocked = true;
 
         // ── Map dimension (2D / 3D) ───────────────────────────────────────────
 
@@ -544,6 +548,27 @@ function findClosestStopByLocation(stops, lat, lon) {
         map.on("style.load", () => {
             applyMapDimensionMode();
             if (currentStyle === "standard") map.setConfigProperty("basemap", "lightPreset", "dusk");
+
+            // ── Hide roads ────────────────────────────────────────────────────
+            // Try the component-based config property first (Standard / Standard-Satellite styles)
+            try {
+                map.setConfigProperty("basemap", "showRoadLabels", false);
+            } catch (e) {
+                // Not supported on this style — that's fine
+            }
+
+            // Also hide any traditional road layers that are present in the style
+            const layers = map.getStyle().layers;
+            for (const layer of layers) {
+                const id = (layer.id || "").toLowerCase();
+                const sl = (layer["source-layer"] || "").toLowerCase();
+                if (id.includes("road") || sl.includes("road")) {
+                    map.setLayoutProperty(layer.id, "visibility", "none");
+                }
+            }
+
+            // DEBUG — remove this console.log once roads are confirmed hidden
+            console.log("All layers:", layers.map(l => ({ id: l.id, sourceLayer: l["source-layer"] })));
         });
 
         await new Promise(resolve => map.on("load", resolve));
@@ -559,7 +584,7 @@ function findClosestStopByLocation(stops, lat, lon) {
         const takeoffStop     = stops.find(s => Number(s.DR) === TAKEOFF_DR) || stops.find(s => Number(s.DR) >= TAKEOFF_DR);
         const TAKEOFF_ARRIVAL = takeoffStop ? Number(takeoffStop.UnixArrivalArrival) : null;
 
-        // ── Session state ─────────────────────────────────────────────────────
+        // ── Remaining session state ───────────────────────────────────────────
 
         let isDelivering            = false;
         let currentSegDR            = null;
@@ -579,8 +604,6 @@ function findClosestStopByLocation(stops, lat, lon) {
         let currentCityTimezone = null;
 
         // ── Camera lock ───────────────────────────────────────────────────────
-
-        let isLocked = true;
 
         function getLockedZoom() {
             if (currentSegDR !== null && Number.isFinite(currentSegDR)) {
