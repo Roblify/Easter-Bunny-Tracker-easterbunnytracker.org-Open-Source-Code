@@ -120,7 +120,7 @@ function formatInt(n) {
 function formatDurationWords(totalSeconds) {
     if (!Number.isFinite(totalSeconds)) return "—";
 
-    let s = Math.max(0, Math.ceil(totalSeconds));
+    let s = Math.max(0, Math.round(totalSeconds));
 
     if (s === 0) return "0 seconds";
     if (s < 2) return "1 second";
@@ -1008,7 +1008,7 @@ function deliveryEndTime(stop) {
             const n = stops.length;
             if (!n) return { mode: "pre" };
 
-            const EPS = 0.5;
+            const EPS = 0.1;
 
             function getDr(i) {
                 return Number(stops[i]?.DR);
