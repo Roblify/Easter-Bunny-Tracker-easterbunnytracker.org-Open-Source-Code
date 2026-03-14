@@ -365,13 +365,11 @@ function deliveryEndTime(stop) {
         }
 
         // ADD AN IGNORE BLOCK TO THIS SECTION IF YOU WANT TO GAIN ACCESS TO TRACKER FOR TESTING PURPOSES
-        /*
         const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
         if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
-        */
 
         // Show initial "Loading..." if element exists
         const statDurationEl = $("statDuration");
@@ -426,12 +424,13 @@ function deliveryEndTime(stop) {
                     });
                 }
             } else {
-                // 2D: flat mercator, no fog/atmosphere, pitch reset to 0
+                // 2D: flat mercator, no fog/atmosphere
                 map.setProjection("mercator");
                 map.setFog(null);
 
-                // If locked camera had a pitch, flatten it
-                if (isLocked) {
+                // FIX: Only reset pitch/bearing if cinematic mode is NOT active.
+                // If cinematic is on, leave the camera alone so the tilt stays.
+                if (isLocked && !cinematicCamEnabled) {
                     map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
                 }
             }
@@ -658,6 +657,7 @@ function deliveryEndTime(stop) {
         initCityPanelCollapseUI();
 
         let cinematicBearing = 0;
+        let currentTravelBearingDeg = 0; // FIX: stores raw travel bearing so offset slider can recalculate
         let currentTravelDirection = null;
 
         // Live city data state
@@ -908,14 +908,13 @@ function deliveryEndTime(stop) {
                     const ll = bunnyMarker.getLngLat();
 
                     const useCine = cinematicCamEnabled;
-                    const use3d = (mapDimensionMode === "3d");
 
                     map.easeTo({
                         center: ll,
                         zoom: useCine ? cinematicZoom : getLockedZoom(),
-                        // Only apply pitch/bearing in 3D mode
-                        pitch: (use3d && useCine) ? CINEMATIC_LOCKED_PITCH : 0,
-                        bearing: (use3d && useCine) ? cinematicBearing : 0,
+                        // FIX: pitch/bearing now apply in both 2D and 3D when cinematic is on
+                        pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
+                        bearing: useCine ? cinematicBearing : 0,
                         duration: 800
                     });
                 }
@@ -939,14 +938,13 @@ function deliveryEndTime(stop) {
             const ll = bunnyMarker.getLngLat();
 
             const useCine = cinematicCamEnabled;
-            const use3d = (mapDimensionMode === "3d");
 
             map.jumpTo({
                 center: ll,
                 zoom: useCine ? cinematicZoom : getLockedZoom(),
-                // Only apply pitch/bearing in 3D mode
-                pitch: (use3d && useCine) ? CINEMATIC_LOCKED_PITCH : 0,
-                bearing: (use3d && useCine) ? cinematicBearing : 0
+                // FIX: pitch/bearing now apply in both 2D and 3D when cinematic is on
+                pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
+                bearing: useCine ? cinematicBearing : 0
             });
         }
 
@@ -1355,7 +1353,7 @@ function deliveryEndTime(stop) {
             if (cityWeatherEl) {
                 if (s.WikipediaUrl) {
                     cityWeatherEl.innerHTML =
-                        `<a href="${s.WikipediaUrl}" target="_blank" rel="noopener noreferrer">Wikipedia article ↗</a>`;
+                        `<a href="${s.WikipediaUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit;">Wikipedia article ↗</a>`;
                 } else {
                     cityWeatherEl.textContent = "No article available";
                 }
@@ -1518,7 +1516,7 @@ function deliveryEndTime(stop) {
             try {
                 const p = bgAudio.play();
                 if (p && typeof p.then === "function") {
-                    p.catch(() => {});
+                    p.catch(() => { });
                 }
             } catch (e) {
                 console.warn("Background music resume on interaction failed:", e);
@@ -1623,11 +1621,14 @@ function deliveryEndTime(stop) {
         if (cineOffsetSlider) {
             cineOffsetSlider.value = String(clampDeg0to180(cinematicSideOffsetDeg));
 
+            // FIX: Recalculate cinematicBearing from stored raw travel bearing + new offset
+            // so the camera actually moves when the slider is dragged.
             cineOffsetSlider.addEventListener("input", () => {
                 cinematicSideOffsetDeg = clampDeg0to180(cineOffsetSlider.value);
                 saveSettings({ cinematicSideOffsetDeg });
-
                 updateCinematicOffsetUI();
+
+                cinematicBearing = (currentTravelBearingDeg + cinematicSideOffsetDeg) % 360;
 
                 if (isLocked && cinematicCamEnabled) {
                     followBunnyIfLocked();
@@ -1894,7 +1895,10 @@ function deliveryEndTime(stop) {
                     Number.isFinite(to.Latitude) && Number.isFinite(to.Longitude)
                 ) {
                     const travelBrng = bearingDeg(from.Latitude, from.Longitude, to.Latitude, to.Longitude);
-                    cinematicBearing = (travelBrng + cinematicSideOffsetDeg) % 360;
+                    // FIX: Store raw travel bearing separately so the offset slider can
+                    // recalculate cinematicBearing without waiting for the next tick.
+                    currentTravelBearingDeg = travelBrng;
+                    cinematicBearing = (currentTravelBearingDeg + cinematicSideOffsetDeg) % 360;
                 }
 
                 const toDr = Number(to.DR);
@@ -1959,5 +1963,3 @@ function deliveryEndTime(stop) {
         if (el) el.textContent = "Error (see console)";
     }
 })();
-
-
