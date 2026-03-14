@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Easter Bunny Tracker - FAQ</title>
+    <link rel="icon" href="assets/img/Bunny.png" type="image/png">
+    <style>
+        :root {
+            --bg1: #0b1020;
+            --bg2: #0a2a1a;
+            --card: rgba(255, 255, 255, 0.06);
+            --text: rgba(255, 255, 255, 0.92);
+            --muted: rgba(255, 255, 255, 0.70);
+            --border: rgba(255, 255, 255, 0.14);
+            --shadow: 0 20px 70px rgba(0, 0, 0, 0.55);
+            --accent: rgba(130, 255, 190, 0.85);
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            color: var(--text);
+        }
+
+        body {
+            background:
+                radial-gradient(1200px 700px at 15% 10%, rgba(130, 255, 190, 0.12), transparent 60%),
+                radial-gradient(1000px 800px at 80% 20%, rgba(140, 180, 255, 0.12), transparent 55%),
+                linear-gradient(140deg, var(--bg1), var(--bg2));
+            padding: 18px;
+        }
+
+        .wrap {
+            width: min(920px, 100%);
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 18px 18px 14px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            font-weight: 800;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        h1 {
+            margin: 6px 0 0;
+            font-size: clamp(22px, 3.4vw, 34px);
+            line-height: 1.15;
+        }
+
+        .meta {
+            margin: 8px 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.10);
+            color: var(--text);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-weight: 900;
+            font-size: 13px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.28);
+        }
+
+        .content {
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 14px;
+        }
+
+        /* ── Section headings ── */
+        .section-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0 10px;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            color: var(--accent);
+        }
+
+        .section-heading:first-child { margin-top: 6px; }
+
+        .section-heading .icon {
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        /* ── FAQ accordion items ── */
+        .faq-item {
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03);
+            transition: border-color 0.18s;
+        }
+
+        .faq-item:last-child { margin-bottom: 0; }
+
+        .faq-item.is-open {
+            border-color: rgba(130, 255, 190, 0.25);
+            background: rgba(130, 255, 190, 0.04);
+        }
+
+        .faq-q {
+            all: unset;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            cursor: pointer;
+            gap: 12px;
+            box-sizing: border-box;
+        }
+
+        .faq-q:hover { color: #fff; }
+
+        .faq-chevron {
+            font-size: 11px;
+            color: var(--muted);
+            flex-shrink: 0;
+            transition: transform 0.2s ease;
+            user-select: none;
+        }
+
+        .faq-item.is-open .faq-chevron { transform: rotate(180deg); }
+
+        .faq-a {
+            display: none;
+            padding: 0 14px 12px;
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, 0.80);
+            line-height: 1.55;
+        }
+
+        .faq-item.is-open .faq-a { display: block; }
+
+        .faq-a a {
+            color: rgba(180, 220, 255, 0.95);
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.10);
+            margin: 16px 0;
+        }
+
+        .foot {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card">
+            <div class="top">
+                <div class="badge">Easter Bunny Tracker</div>
+                <a class="btn" href="tracker.html">← Back to Tracker</a>
+            </div>
+
+            <h1>Frequently Asked Questions</h1>
+            <div class="meta">
+                Got a question? Browse the sections below - click any question to reveal the answer.
+            </div>
+
+            <div class="content">
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 1 - THE EASTER BUNNY
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">🐣</span> The Easter Bunny & the Tracker</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        How is the Easter Bunny tracked?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The Easter Bunny is tracked using satellites, signals, and special communication! Before his
+                        journey begins, the Bunny shares his planned route with our tracking team, which lets us know
+                        exactly where he's supposed to be at any time. On top of that, satellites in the sky keep a
+                        close eye on him the whole way, so we always know where he is!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        How do you keep track of the eggs delivered and the carrots eaten?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The planned route the Easter Bunny shares with us includes how many eggs will be delivered at
+                        each stop, so we always know how many have been dropped off. As for the carrots - the Bunny
+                        tells us himself! He counts every carrot he eats at each home and reports it back to the
+                        tracker directly. He takes his carrot-counting very seriously.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        How can the Easter Bunny travel so fast and deliver to everyone in almost 24 hours?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Easter magic! The Easter Bunny can travel tens of thousands of miles per hour thanks to his
+                        special magical abilities. This same magic is what lets him zoom through big cities with
+                        lots of homes super quickly, sneak into each house without making a sound, and place every
+                        egg perfectly - all before anyone wakes up!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Does the Easter Bunny have helpers during his journey?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Honestly, we're not sure! We've actually tried asking the Easter Bunny about this ourselves,
+                        but he told us that information has to stay a secret. So the best answer we can give you
+                        is… maybe! It's one of the great Easter mysteries.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        I didn't see the Easter Bunny deliver at my location on the tracker. Why?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        While the Easter Bunny is travelling between his main stops, he also delivers eggs to cities
+                        and towns nearby along the way. Unfortunately the tracker isn't able to show every single one
+                        of those extra locations - there are just too many! So even if your town didn't appear on the
+                        map, he very likely passed right through your area on his journey.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        The Easter Bunny was near my location on the tracker, but I don't see any eggs. Did he skip my house?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Don't worry - just like Santa Claus, the Easter Bunny won't deliver to your home while
+                        you're still awake! If he's been near your area, make sure you go to sleep for the night.
+                        He'll come back around to your home once you do. Check again in the morning and you might
+                        just find a wonderful surprise waiting for you!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Why is it taking so long for the Easter Bunny to reach my home?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The Easter Bunny has a lot of homes to visit before he gets to yours - there are children
+                        all over the world who celebrate Easter and are just as eagerly waiting as you are! He visits
+                        everyone in a careful order so that nobody is missed. Don't worry though - as long as you're
+                        patient and go to sleep at night, the Easter Bunny will absolutely make it to your home!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Will the Easter Bunny still come if I accidentally stay up too late?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The Easter Bunny is very patient and understanding! If you're still awake when he swings by,
+                        he'll quietly move on and circle back once you've fallen asleep. Just close your eyes and
+                        drift off as soon as you can - he keeps an eye on his list and makes sure everyone who goes
+                        to sleep gets their eggs.
+                    </div>
+                </div>
+
+
+                <div class="divider"></div>
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 2 - USING THE TRACKER
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">🗺️</span> Using the Tracker</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        When does the tracker go live?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The tracker begins with pre-journey updates on Easter Eve at 2:00 AM EDT 
+                        (Eastern Daylight Time). Pre Journey updates are 3-hours before the main tracking event starts 
+                        on Easter Eve of 5:00 AM EDT (Eastern Daylight Time). The main tracker goes on for over 24-hours.
+                        In which it ends on Easter Sunday at 6:00 AM EDT (Eastern Daylight Time).
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What does the "Last spotted" field mean?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        "Last spotted" shows the most recent location the Easter Bunny departed from. As he moves from
+                        city to city, this field updates to reflect wherever he was just delivering eggs.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What are the basket markers on the map?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Every time the Easter Bunny finishes delivering at a location and moves on, a basket icon is
+                        left behind on the map to mark where he's already been. Click any basket marker to see
+                        information about that city!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Why does the "Arriving at your location" estimate say "anytime"?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        If the Easter Bunny is already very close to your location - or has already passed through - 
+                        the estimate will show "anytime" to let you know he's in your area. That means it's time to
+                        get to sleep!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Can I unlock the camera and explore the map freely?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Yes! Click the "🔓 Unlock Camera" button in the bottom-right corner of the tracker to freely
+                        pan, zoom, and explore the map. Press "🔒 Lock to Bunny" at any time to snap back to following
+                        the Easter Bunny automatically.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What is the City Info panel on the side?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The City Info panel displays details about the Easter Bunny's current or next destination,
+                        including the local time there, population, elevation, and a link to its Wikipedia article.
+                        You can collapse it using the small arrow button in its corner if you'd prefer a cleaner view.
+                    </div>
+                </div>
+
+
+                <div class="divider"></div>
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 3 - SETTINGS & FEATURES
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">⚙️</span> Settings & Features</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What does Streamer Mode do?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Streamer Mode hides the "Easter Bunny will arrive at your location in about…" estimate from
+                        the HUD. This prevents viewers of your broadcast from guessing your approximate location based
+                        on that arrival time. All other tracker information remains visible.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What is the Cinematic Camera mode?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Cinematic Camera mode tilts and angles the camera to follow the Easter Bunny from the side
+                        rather than directly overhead, giving the tracker a more dynamic, movie-like feel. You can
+                        adjust the side offset angle (0° = behind, 90° = side, 180° = front) when it's enabled.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What is the difference between 2D and 3D map mode?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        2D mode shows a traditional flat Mercator map projection. 3D mode switches to a globe view
+                        with atmospheric haze, star effects, and a more realistic representation of the Earth.
+                        Both modes update in real time - it's just a matter of personal preference!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Are my settings saved between visits?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Yes. All settings - including map style, camera mode, speed unit preference, streamer mode,
+                        and music preference - are automatically saved to your browser's local storage and will be
+                        restored the next time you visit.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Can I turn the music off?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Yes! Open the Help menu, go to the Settings tab, and click "Music: On" to toggle it off.
+                        Your preference is saved automatically. Note that some browsers require at least one
+                        interaction with the page before audio is allowed to start.
+                    </div>
+                </div>
+
+
+                <div class="divider"></div>
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 4 - STREAMING & BROADCASTING
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">📺</span> Streaming & Broadcasting</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Can I stream the tracker on YouTube or Twitch?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Yes! Re-streaming or broadcasting the Easter Bunny Tracker on platforms such as YouTube or
+                        Twitch is permitted, including with monetization enabled. Please ensure your broadcast
+                        does not misrepresent or interfere with the tracker. See the
+                        <a href="https://easterbunnytracker.org/terms" target="_blank" rel="noopener">Terms of Service</a>
+                        for full details.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Can I monetize my stream of the tracker?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Yes, monetization is permitted. This includes ads, channel memberships, subscriptions,
+                        and donations. We just ask that you stream in good faith and don't misrepresent what the
+                        tracker is or how it works.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Should I enable Streamer Mode when broadcasting?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        It's entirely up to you, but we recommend it. Streamer Mode hides the location-based arrival
+                        estimate so your viewers can't infer your approximate location from it. Everything else - 
+                        live tracking, stats, the map - remains fully visible. You can enable it in the Settings tab
+                        of the Help menu.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Are there any restrictions on how I present the tracker during a broadcast?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Please don't remove, hide, or alter any third-party attribution text that appears on the map
+                        (such as map imagery credits). Beyond that, feel free to add commentary, overlays, or branding
+                        of your own - just don't misrepresent the tracker as something it isn't.
+                    </div>
+                </div>
+
+
+                <div class="divider"></div>
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 5 - TECHNICAL
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">🔧</span> Technical</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        What technology powers the tracker?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The tracker is built with vanilla HTML, CSS, and JavaScript, and uses
+                        <a href="https://www.mapbox.com/" target="_blank" rel="noopener">Mapbox GL JS</a>
+                        for the interactive map. The Easter Bunny's route is pre-planned and stored in a JSON file
+                        that the tracker reads at launch. A tick loop running every 250ms interpolates the bunny's
+                        position and updates all the HUD statistics in real time.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        How does the tracker know where I am?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The tracker uses your IP address with the
+                        <a href="https://ipinfo.io" target="_blank" rel="noopener">ipinfo.io</a>
+                        service to estimate your general location. This is used solely to calculate the
+                        "arrives at your location in about…" estimate. It is not stored, logged, or shared.
+                        See our <a href="https://easterbunnytracker.org/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+                        for more information.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        The tracker isn't loading - what should I do?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Try the following steps: refresh the page, clear your browser cache, or try a different
+                        browser. The tracker works best in up-to-date versions of Chrome, Firefox, Edge, or Safari.
+                        If the problem persists, please reach out via the Contact section in the Help menu.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Why isn't the map displaying correctly?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The map requires WebGL support in your browser. Make sure hardware acceleration is enabled
+                        in your browser settings. If you're on a very old device or browser, WebGL may not be
+                        supported. Try switching from 3D to 2D mode in Settings, which can be less demanding.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Does the tracker work on mobile?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Yes! The tracker is designed to be responsive and functional on mobile browsers. For the
+                        best experience, we recommend using the tracker on a desktop or laptop with a larger screen,
+                        but it works well on phones and tablets too.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        How often does the tracker update?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The tracker updates every 250 milliseconds - four times per second. The Easter Bunny's
+                        position is smoothly interpolated between stops, so his movement on the map appears
+                        continuous rather than jumping between locations.
+                    </div>
+                </div>
+
+
+                <div class="divider"></div>
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 6 - PRIVACY & DATA
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">🔒</span> Privacy & Data</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Does the tracker collect any personal data?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The tracker uses your IP address to estimate your location for the arrival countdown.
+                        This lookup is done through ipinfo.io and is not stored by us. Settings are saved locally
+                        in your browser and never transmitted anywhere. See the full
+                        <a href="https://easterbunnytracker.org/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+                        for complete details.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Where are my settings stored?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        All settings are stored in your browser's local storage, entirely on your own device.
+                        Nothing is sent to a server. Clearing your browser data will reset your preferences to
+                        their defaults.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Does the tracker use cookies?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The tracker itself does not use cookies. Settings are stored via the browser's local storage
+                        API rather than cookies. Third-party services used by the tracker (such as Mapbox) may
+                        have their own data practices, which are covered by their respective privacy policies.
+                    </div>
+                </div>
+
+
+                <div class="divider"></div>
+
+                <!-- ══════════════════════════════════════════════════
+                     SECTION 7 - GENERAL
+                ══════════════════════════════════════════════════ -->
+                <div class="section-heading"><span class="icon">💬</span> General</div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Is the Easter Bunny Tracker free to use?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Completely free! The tracker is a passion project developed and maintained by one person.
+                        If you'd like to support the cost of keeping it running, you're welcome to donate via Ko-fi - 
+                        there's a link in the Donate section of the Help menu on the tracker page.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Will the tracker be available every year?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        That's the plan! The Easter Bunny Tracker launched its first official live year in 2026 and
+                        is updated annually with improvements to accuracy, performance, and presentation. Follow along
+                        for updates each Easter season.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        I found a bug or have a suggestion - how do I report it?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        Please reach out via the Contact section in the Help menu on the tracker page, or email
+                        <a href="/cdn-cgi/l/email-protection#275452575748555367424654534255455249495e535546444c425509485540"><span class="__cf_email__" data-cfemail="cdbeb8bdbda2bfb98da8acbeb9a8bfafb8a3a3b4b9bfacaea6a8bfe3a2bfaa">[support@easterbunnytracker.org]</span></a>.
+                        Bug reports and suggestions are always welcome and genuinely appreciated!
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-q" type="button" aria-expanded="false">
+                        Who made the Easter Bunny Tracker?
+                        <span class="faq-chevron">▼</span>
+                    </button>
+                    <div class="faq-a">
+                        The Easter Bunny Tracker was designed and developed by Roblify. Development began in 2025
+                        with the goal of creating a modern, map-based holiday tracking experience. You can support
+                        the project by donating on
+                        <a href="https://ko-fi.com/roblify" target="_blank" rel="noopener">Ko-fi</a>.
+                    </div>
+                </div>
+
+            </div><!-- /.content -->
+
+            <div class="foot">
+                © 2026 Easter Bunny Tracker. All rights reserved (where applicable).
+            </div>
+        </div>
+    </div>
+
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+        // Accordion toggle
+        document.querySelectorAll(".faq-q").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const item     = btn.closest(".faq-item");
+                const isOpen   = item.classList.contains("is-open");
+                item.classList.toggle("is-open", !isOpen);
+                btn.setAttribute("aria-expanded", String(!isOpen));
+            });
+        });
+
+        // Close on backdrop click (click outside help modal - not applicable here, but
+        // kept as a safety net in case the help overlay is ever embedded on this page)
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") {
+                document.querySelectorAll(".faq-item.is-open").forEach(item => {
+                    item.classList.remove("is-open");
+                    item.querySelector(".faq-q").setAttribute("aria-expanded", "false");
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>
