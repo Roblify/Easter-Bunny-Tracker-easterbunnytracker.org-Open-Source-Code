@@ -1492,7 +1492,7 @@ function findClosestStopByLocation(stops, lat, lon) {
         // ── Start ─────────────────────────────────────────────────────────────
 
         tick();
-        setInterval(tick, 250);
+        setInterval(tick, 100);
 
         console.log(`Loaded route with ${stops.length} stops (Mapbox globe).`);
 
