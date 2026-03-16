@@ -1,0 +1,165 @@
+# 🐰 Easter Bunny Tracker
+
+The official open-source codebase for [easterbunnytracker.org](https://easterbunnytracker.org) — a real-time, interactive map experience that follows the Easter Bunny as he delivers eggs and baskets around the world.
+
+> **2026** marks the first official year of live Easter Bunny tracking. Development began in 2025.
+
+---
+
+## ✨ Features
+
+- **Live Tracking** — The Easter Bunny's position is interpolated in real time between route stops using precise Unix timestamps
+- **HUD Stats** — Live updates for status, speed (MPH or KM/H), eggs delivered, carrots eaten, and arrival estimates
+- **City Info Panel** — Displays local time, population, elevation, Wikipedia link, and travel direction for the current city
+- **Basket Markers** — Dropped on the map at each stop the Bunny has already visited
+- **Egg Animation** — A floating egg FX follows the Bunny while he is delivering
+- **Cinematic Camera** — Optional side-tracking camera angle with adjustable offset and zoom
+- **2D / 3D Map** — Toggle between a flat Mercator map and a 3D globe with atmosphere and star effects
+- **Map Styles** — Switch between Standard and Satellite map styles
+- **Streamer Mode** — Hides the viewer arrival estimate to prevent location inference on streams
+- **Background Music** — Looping Easter-themed audio with autoplay fallback handling
+- **Persistent Settings** — All user preferences are saved to `localStorage` automatically
+
+---
+
+## 🗂️ Project Structure
+
+```
+/
+├── assets/
+│   ├── audio/          # Background music
+│   └── img/            # Bunny, Basket, and Egg images
+├── css/
+│   ├── style.css       # Main tracker styles
+│   └── countdown.css   # Countdown page styles
+├── data/
+│   └── route.json      # The Easter Bunny's full route data
+├── js/
+│   ├── main.js         # Core tracker logic
+│   └── countdown.js    # Countdown timer logic
+├── tools/              # Python utility scripts (route processing)
+├── index.html          # Pre-journey countdown page
+├── tracker.html        # Main live tracker page
+├── FAQ.html
+├── privacy.html
+├── terms.html
+└── 404.html
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+You will need API keys for two external services:
+
+| Service | Purpose | Sign up |
+|---|---|---|
+| [Mapbox](https://www.mapbox.com/) | Interactive map rendering | mapbox.com |
+| [ipinfo.io](https://ipinfo.io/) | Viewer location for arrival estimate | ipinfo.io |
+
+Both services have free tiers that are sufficient for running the tracker.
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Roblify/Easter-Bunny-Tracker-easterbunnytracker.org-Open-Source-Code.git
+   cd Easter-Bunny-Tracker-easterbunnytracker.org-Open-Source-Code
+   ```
+
+2. **Add your API keys** in `js/main.js`:
+   ```js
+   const MAPBOX_TOKEN = "your_mapbox_token_here";
+   const _IPT = atob("your_base64_encoded_ipinfo_token_here");
+   ```
+
+3. **Populate `data/route.json`** with your route data. Each stop should follow this structure:
+   ```json
+   [
+     {
+       "DR": 77,
+       "Unix Arrival Arrival": 1775293484,
+       "Unix Arrival": 1775293500,
+       "Unix Arrival Departure": 1775293501,
+       "Pretty Arrival EDT 2026": "4/4/2026 5:05:00",
+       "City": "London",
+       "Region": "Kiribati",
+       "CC": "ki",
+       "Locale": "en-KI",
+       "Eggs Delivered": 8396,
+       "Carrots eaten": 78,
+       "Latitude": 1.983726,
+       "Longitude": -157.474748,
+       "Population Num": 1899,
+       "Population Year": 2015,
+       "Elevation Meter": 3,
+       "Arrival Stoppage Time": 32,
+       "Timezone": "Pacific/Kiritimati",
+       "Wikipedia attr": "https://en.wikipedia.org/wiki/London,_Kiribati",
+       "": null
+     }
+   ]
+   ```
+
+4. **Serve the project locally.** Because the tracker fetches `route.json` via `fetch()`, you need a local HTTP server rather than opening `index.html` directly in a browser:
+   ```bash
+   npx serve .
+   # or
+   python3 -m http.server 8080
+   ```
+
+5. **Open** `http://localhost:8080` in your browser.
+
+---
+
+## ⚙️ Configuration
+
+Key constants at the top of `js/main.js` can be adjusted to suit your route:
+
+| Constant | Default | Description |
+|---|---|---|
+| `BASKET_START_DR` | `77` | DR value at which basket markers begin appearing |
+| `TAKEOFF_DR` | `76` | DR value for the takeoff clearance stop |
+| `FINAL_DR` | `1048` | DR value of the last stop (Easter Island) |
+| `LOCKED_ZOOM` | `5.2` | Map zoom during active delivery |
+| `LOCKED_ZOOM_PRE` | `3.5` | Map zoom before takeoff and at the final stop |
+| `MUSIC_VOLUME` | `0.2` | Background music volume (0.0 – 1.0) |
+
+### Understanding DR (Delivery Readiness)
+
+The DR field controls the tracker's phase logic:
+
+- **DR < 76** — Pre-journey preparation stops; no delivery stats shown yet
+- **DR = 76** — Takeoff clearance stop; "lifting off" status shown briefly
+- **DR ≥ 77** — Active delivery; baskets, stats, and city panel are shown
+- **DR = 1048** — Final stop; journey complete
+
+---
+
+## 🛠️ Tools
+
+The `tools/` directory contains Python utility scripts for working with route data (e.g. processing, validating, or generating `route.json`). See the scripts inside for usage instructions.
+
+---
+
+## 📄 License
+
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for full terms.
+
+You are free to use, modify, and distribute this code, provided that any distributed modifications are also released under the GPL-3.0.
+
+---
+
+## 💛 Support the Project
+
+The Easter Bunny Tracker is built and maintained by **Roblify**. If you enjoy it and want to help keep it running, consider making a donation:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/roblify)
+
+---
+
+## 📬 Contact
+
+Questions, feedback, or bug reports: [support@easterbunnytracker.org](mailto:support@easterbunnytracker.org)
