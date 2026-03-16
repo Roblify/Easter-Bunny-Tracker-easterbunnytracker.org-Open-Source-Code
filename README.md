@@ -75,31 +75,31 @@ Both services have free tiers that are sufficient for running the tracker.
    const _IPT = atob("your_base64_encoded_ipinfo_token_here");
    ```
 
-3. **Populate `data/route.json`** with your route data. Each stop should follow this structure:
+3. **Populate `data/route.json`** with your route data. Each stop follows this structure:
    ```json
    [
-     {
-       "DR": 77,
-       "Unix Arrival Arrival": 1775293484,
-       "Unix Arrival": 1775293500,
-       "Unix Arrival Departure": 1775293501,
-       "Pretty Arrival EDT 2026": "4/4/2026 5:05:00",
-       "City": "London",
-       "Region": "Kiribati",
-       "CC": "ki",
-       "Locale": "en-KI",
-       "Eggs Delivered": 8396,
-       "Carrots eaten": 78,
-       "Latitude": 1.983726,
-       "Longitude": -157.474748,
-       "Population Num": 1899,
-       "Population Year": 2015,
-       "Elevation Meter": 3,
-       "Arrival Stoppage Time": 32,
-       "Timezone": "Pacific/Kiritimati",
-       "Wikipedia attr": "https://en.wikipedia.org/wiki/London,_Kiribati",
-       "": null
-     }
+    {
+      "DR": 77,
+      "Unix Arrival Arrival": 1775293484,
+      "Unix Arrival": 1775293500,
+      "Unix Arrival Departure": 1775293501,
+      "Pretty Arrival EDT 2026": "4/4/2026 5:05:00",
+      "City": "London",
+      "Region": "Kiribati",
+      "CC": "ki",
+      "Locale": "en-KI",
+      "Eggs Delivered": 8396,
+      "Carrots eaten": 78,
+      "Latitude": 1.983726,
+      "Longitude": -157.474748,
+      "Population Num": 1899,
+      "Population Year": 2015,
+      "Elevation Meter": 3,
+      "Arrival Stoppage Time": 32,
+      "Timezone": "Pacific/Kiritimati",
+      "Wikipedia attr": "https://en.wikipedia.org/wiki/London,_Kiribati",
+      "": null
+    }
    ]
    ```
 
@@ -140,7 +140,61 @@ The DR field controls the tracker's phase logic:
 
 ## 🛠️ Tools
 
-The `tools/` directory contains Python utility scripts for working with route data (e.g. processing, validating, or generating `route.json`). See the scripts inside for usage instructions.
+### `tools/compiler.py` — Route Date Compiler
+
+`compiler.py` reads `data/route.json`, detects the earliest scheduled date in the route, and shifts all Unix timestamps forward so the journey starts on a new target date of your choice — useful when adapting the route for a future year's Easter. Stops with `DR == 0` are ignored and left unchanged.
+
+Before writing the updated file, the script renames the existing `route.json` to `DELETETHIS.json` as a backup.
+
+> **Requires Python.** If you don't have it installed, download it from [python.org/downloads](https://www.python.org/downloads/).
+
+#### Step 1 — Set your target date
+
+Open `tools/compiler.py` and update the `--test-base-date` default value to the upcoming **Easter Eve** date (the day before Easter Sunday). The script will automatically shift any stops that fall on the following day to Easter Sunday:
+
+```python
+ap.add_argument(
+    "--test-base-date",
+    default="2026-3-15",  # Change to the upcoming Easter Eve date (YYYY-MM-DD)
+    help="Test base date in YYYY-MM-DD (default: 2026-3-15)"
+)
+```
+
+> ⚠️ This change must be made directly in `tools/compiler.py`. Editing any other file will have no effect.
+
+Save the file after making your change (`Ctrl + S`).
+
+#### Step 2 — Run the script
+
+From the root of the project, run one of the following commands depending on your system:
+
+```bash
+python tools/compiler.py
+```
+```bash
+python tools\compiler.py
+```
+```bash
+py tools\compiler.py
+```
+
+#### Step 3 — Confirm success
+
+If the script ran successfully, you will see output similar to this:
+
+```
+Renamed existing route.json -> DELETETHIS.json
+Done.
+Input:  data\route.json
+Output: data\route.json
+Pretty field: Pretty Arrival EDT 2026
+Original base date detected (ignoring DR 0): 2026-04-04
+Test base date: 2026-03-15 (EDT via America/New_York)
+Converted stops: 87
+Skipped DR 0 stops: 2
+```
+
+This confirms that `data/route.json` has been written with updated timestamps, and the previous version has been preserved as `DELETETHIS.json`. If the script outputs an error instead, check that Python is correctly installed and that you are running the command from the project root directory.
 
 ---
 
