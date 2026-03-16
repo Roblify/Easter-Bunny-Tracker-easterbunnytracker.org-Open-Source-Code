@@ -29,25 +29,28 @@ const _IPT         = atob("YOUR_IP_TOKEN_HERE"); // <-- put your ipinfo.io token
 const ROUTE_FILE = "data/route.json";
 
 // Delivery-readiness thresholds (DR values)
-const BASKET_START_DR   = 77;
+const BASKET_START_DR = 77;
 const CITY_PANEL_MIN_DR = 77;
-const TAKEOFF_DR        = 76;
+const TAKEOFF_DR = 76;
 const PRE_STATUS_MAX_DR = 75;
-const FINAL_DR          = 1048;
+const FINAL_DR = 1048;
+
+// Other tracker variables
+let speedJitter = 0;
 
 // Mapbox zoom levels
-const LOCKED_ZOOM       = 5.2;   // zoom during active delivery (DR ≥ 76)
-const LOCKED_ZOOM_PRE   = 3.5;   // zoom before DR 76 and at final stop
+const LOCKED_ZOOM = 5.2;   // zoom during active delivery (DR ≥ 76)
+const LOCKED_ZOOM_PRE = 3.5;   // zoom before DR 76 and at final stop
 const UNLOCKED_MIN_ZOOM = 0.1;
-const UNLOCKED_MAX_ZOOM = 8.0;
+const UNLOCKED_MAX_ZOOM = 13.0;
 
 // Cinematic camera
-const CINEMATIC_ZOOM_DEFAULT            = 6;
-const CINEMATIC_LOCKED_PITCH            = 67;
+const CINEMATIC_ZOOM_DEFAULT = 6;
+const CINEMATIC_LOCKED_PITCH = 67;
 const CINEMATIC_SIDE_OFFSET_DEFAULT_DEG = 30;
 
 // Map styles
-const STANDARD_STYLE  = "mapbox://styles/mapbox/standard";
+const STANDARD_STYLE = "mapbox://styles/mapbox/standard";
 const SATELLITE_STYLE = "mapbox://styles/theroblify/cmmqvyxfl00as01sugspqf5d5";
 
 const MUSIC_VOLUME = 0.2;
@@ -132,15 +135,15 @@ function formatDurationWords(totalSeconds) {
 
     let s = Math.max(0, Math.round(totalSeconds));
     if (s === 0) return "0 seconds";
-    if (s < 2)   return "1 second";
+    if (s < 2) return "1 second";
 
-    const hours   = Math.floor(s / 3600);
+    const hours = Math.floor(s / 3600);
     s %= 3600;
     const minutes = Math.floor(s / 60);
     const seconds = s % 60;
 
     const parts = [];
-    if (hours   > 0) parts.push(`${hours} ${hours     === 1 ? "hour"   : "hours"}`);
+    if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`);
     if (minutes > 0) parts.push(`${minutes} ${minutes === 1 ? "minute" : "minutes"}`);
     if (seconds > 0 || parts.length === 0)
         parts.push(`${seconds} ${seconds === 1 ? "second" : "seconds"}`);
@@ -149,15 +152,15 @@ function formatDurationWords(totalSeconds) {
 }
 
 function formatViewerEtaText(deltaSeconds) {
-    if (!Number.isFinite(deltaSeconds))              return "Unknown";
+    if (!Number.isFinite(deltaSeconds)) return "Unknown";
     if (deltaSeconds <= 0 || deltaSeconds < 30 * 60) return "anytime";
 
     const halfHours = Math.round((deltaSeconds / 3600) * 2);
-    const rounded   = halfHours / 2;
-    const whole     = Math.floor(rounded);
-    const isHalf    = Math.abs(rounded - whole - 0.5) < 1e-6;
+    const rounded = halfHours / 2;
+    const whole = Math.floor(rounded);
+    const isHalf = Math.abs(rounded - whole - 0.5) < 1e-6;
 
-    if (!isHalf)    return `${rounded.toFixed(0)} ${rounded.toFixed(0) === "1" ? "hour" : "hours"}`;
+    if (!isHalf) return `${rounded.toFixed(0)} ${rounded.toFixed(0) === "1" ? "hour" : "hours"}`;
     if (whole === 0) return "½ hour";
     return `${whole}½ hours`;
 }
@@ -165,8 +168,8 @@ function formatViewerEtaText(deltaSeconds) {
 
 // ── 4b. Math / Interpolation ─────────────────────────────────────────────────
 
-function clamp01(x)        { return Math.max(0, Math.min(1, x)); }
-function lerp(a, b, t)     { return a + (b - a) * t; }
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
 function wrapDeltaLon(deg) { return ((deg + 540) % 360) - 180; }
 function normalizeLon(lon) { return ((lon + 540) % 360) - 180; }
 
@@ -183,7 +186,7 @@ function clampDeg0to180(v) {
 function interpolateLatLon(a, b, t) {
     const dLon = wrapDeltaLon(b.Longitude - a.Longitude);
     return {
-        lat: lerp(a.Latitude,  b.Latitude,  t),
+        lat: lerp(a.Latitude, b.Latitude, t),
         lon: normalizeLon(a.Longitude + dLon * t)
     };
 }
@@ -192,11 +195,11 @@ function interpolateLatLon(a, b, t) {
 // ── 4c. Geographic math ──────────────────────────────────────────────────────
 
 function haversineKm(lat1, lon1, lat2, lon2) {
-    const R     = 6371;
+    const R = 6371;
     const toRad = d => (d * Math.PI) / 180;
-    const dLat  = toRad(lat2 - lat1);
-    const dLon  = toRad(lon2 - lon1);
-    const a     =
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
         Math.sin(dLat / 2) ** 2 +
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
@@ -206,10 +209,10 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 function bearingDeg(lat1, lon1, lat2, lon2) {
     const toRad = d => (d * Math.PI) / 180;
     const toDeg = r => (r * 180) / Math.PI;
-    const φ1    = toRad(lat1), φ2 = toRad(lat2);
-    const Δλ    = toRad(lon2 - lon1);
-    const y     = Math.sin(Δλ) * Math.cos(φ2);
-    const x     = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    const φ1 = toRad(lat1), φ2 = toRad(lat2);
+    const Δλ = toRad(lon2 - lon1);
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
@@ -222,7 +225,7 @@ function computeTravelDirection(fromStop, toStop) {
     if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return null;
 
     const labels = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"];
-    const arrows = ["↑",     "↗",          "→",    "↘",          "↓",     "↙",          "←",    "↖"];
+    const arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
     const sector = Math.round(bearingDeg(lat1, lon1, lat2, lon2) / 45) % 8;
 
     return { text: labels[sector], arrow: arrows[sector] };
@@ -233,7 +236,7 @@ function computeTravelDirection(fromStop, toStop) {
  *  5. DATA HELPERS  (stop accessors, label builders)
  * ============================================================================= */
 
-function toNum(x)   { const n = Number(x); return Number.isFinite(n) ? n : x; }
+function toNum(x) { const n = Number(x); return Number.isFinite(n) ? n : x; }
 function safeNum(x) { const n = Number(x); return Number.isFinite(n) ? n : NaN; }
 
 function parseDR(v) {
@@ -244,16 +247,16 @@ function parseDR(v) {
 }
 
 function cityLabel(stop) {
-    const city   = stop.City   || "Unknown";
+    const city = stop.City || "Unknown";
     const region = stop.Region ? `, ${stop.Region}` : "";
     return `${city}${region}`;
 }
 
 function statusCityLabel(stop) {
     if (!stop) return "Unknown";
-    const city   = stop.City   || "Unknown";
+    const city = stop.City || "Unknown";
     const region = stop.Region || "";
-    const dr     = Number(stop.DR);
+    const dr = Number(stop.DR);
     return (Number.isFinite(dr) && dr < 76) || !region ? city : `${city}, ${region}`;
 }
 
@@ -263,15 +266,15 @@ function cityOnly(stop) {
 
 function deliveryStartTime(stop) {
     const aA = safeNum(stop.UnixArrivalArrival);
-    const a  = safeNum(stop.UnixArrival);
+    const a = safeNum(stop.UnixArrival);
     if (Number.isFinite(a) && Number.isFinite(aA)) return Math.max(aA, a);
     return Number.isFinite(a) ? a : aA;
 }
 
 function deliveryEndTime(stop) {
     const aA = safeNum(stop.UnixArrivalArrival);
-    const a  = safeNum(stop.UnixArrival);
-    const d  = safeNum(stop.UnixArrivalDeparture);
+    const a = safeNum(stop.UnixArrival);
+    const d = safeNum(stop.UnixArrivalDeparture);
     if (Number.isFinite(d)) return d;
     if (Number.isFinite(a)) return a;
     return aA;
@@ -287,24 +290,24 @@ async function loadRoute() {
     if (!res.ok) throw new Error(`Failed to load route.json (${res.status})`);
 
     const data = await res.json();
-    let stops  = Array.isArray(data) ? data : data.route || data.stops || [];
+    let stops = Array.isArray(data) ? data : data.route || data.stops || [];
     if (!Array.isArray(stops)) throw new Error("route.json format not recognized.");
 
     stops = stops.map(s => ({
         ...s,
-        DR:                   parseDR(s.DR),
-        Latitude:             Number(s.Latitude),
-        Longitude:            Number(s.Longitude),
-        EggsDelivered:        toNum(s["Eggs Delivered"]),
-        CarrotsEaten:         toNum(s["Carrots eaten"]),
-        UnixArrivalArrival:   Number(s["Unix Arrival Arrival"]),
-        UnixArrival:          Number(s["Unix Arrival"]),
+        DR: parseDR(s.DR),
+        Latitude: Number(s.Latitude),
+        Longitude: Number(s.Longitude),
+        EggsDelivered: toNum(s["Eggs Delivered"]),
+        CarrotsEaten: toNum(s["Carrots eaten"]),
+        UnixArrivalArrival: Number(s["Unix Arrival Arrival"]),
+        UnixArrival: Number(s["Unix Arrival"]),
         UnixArrivalDeparture: Number(s["Unix Arrival Departure"]),
-        WikipediaUrl:         typeof s["Wikipedia attr"] === "string" ? s["Wikipedia attr"] : null,
-        Timezone:             typeof s["Timezone"]       === "string" ? s["Timezone"]       : null,
-        PopulationNum:        Number(s["Population Num"]),
-        PopulationYear:       toNum(s["Population Year"]),
-        ElevationMeter:       Number(s["Elevation Meter"])
+        WikipediaUrl: typeof s["Wikipedia attr"] === "string" ? s["Wikipedia attr"] : null,
+        Timezone: typeof s["Timezone"] === "string" ? s["Timezone"] : null,
+        PopulationNum: Number(s["Population Num"]),
+        PopulationYear: toNum(s["Population Year"]),
+        ElevationMeter: Number(s["Elevation Meter"])
     }));
 
     stops.sort((a, b) => a.UnixArrivalArrival - b.UnixArrivalArrival);
@@ -322,7 +325,7 @@ async function loadRoute() {
  * ============================================================================= */
 
 function findSegment(now, stops, takeoffArrival) {
-    const n   = stops.length;
+    const n = stops.length;
     if (!n) return { mode: "pre" };
 
     const EPS = 0.1;
@@ -330,11 +333,11 @@ function findSegment(now, stops, takeoffArrival) {
     const getDr = i => Number(stops[i]?.DR);
 
     const stopDeliverEnd = i => {
-        const s  = stops[i];
+        const s = stops[i];
         const aA = Number(s.UnixArrivalArrival);
-        const a  = Number(s.UnixArrival);
-        const d  = Number(s.UnixArrivalDeparture);
-        let end  = Number.isFinite(d) ? d : (Number.isFinite(a) ? a : aA);
+        const a = Number(s.UnixArrival);
+        const d = Number(s.UnixArrivalDeparture);
+        let end = Number.isFinite(d) ? d : (Number.isFinite(a) ? a : aA);
 
         // Takeoff stop gets a small extra window so the "lifting off" status shows briefly
         const dr = Number(s.DR);
@@ -348,7 +351,7 @@ function findSegment(now, stops, takeoffArrival) {
     const allowPreTimeline = !(Number.isFinite(takeoffArrival) && now >= takeoffArrival - EPS);
 
     if (allowPreTimeline) {
-        let bestIdx  = -1;
+        let bestIdx = -1;
         let bestTime = -Infinity;
 
         for (let i = 0; i < n; i++) {
@@ -369,7 +372,7 @@ function findSegment(now, stops, takeoffArrival) {
 
     // ── Main delivery timeline ───────────────────────────────────────────────
     for (let i = 0; i < n; i++) {
-        const s  = stops[i];
+        const s = stops[i];
         const dr = getDr(i);
         const aA = Number(s.UnixArrivalArrival);
         if (!Number.isFinite(aA)) continue;
@@ -387,7 +390,7 @@ function findSegment(now, stops, takeoffArrival) {
             }
         } else {
             // Pre-takeoff stop
-            const d   = Number(s.UnixArrivalDeparture);
+            const d = Number(s.UnixArrivalDeparture);
             const end = (Number.isFinite(d) && d > aA) ? d : aA;
 
             if (now >= aA - EPS && now < end - EPS) return { mode: "stop", i };
@@ -408,7 +411,7 @@ function findSegment(now, stops, takeoffArrival) {
 // ── Segment classification helpers ──────────────────────────────────────────
 
 function segmentDR(seg, stops) {
-    if (seg.mode === "stop")   return Number(stops[seg.i]?.DR  ?? null);
+    if (seg.mode === "stop") return Number(stops[seg.i]?.DR ?? null);
     if (seg.mode === "travel") return Number(stops[seg.to]?.DR ?? null);
     return null; // "pre"
 }
@@ -454,7 +457,7 @@ async function fetchViewerLocationFromIpInfo() {
 }
 
 function findClosestStopByLocation(stops, lat, lon) {
-    let best       = null;
+    let best = null;
     let bestDistKm = Infinity;
 
     for (const s of stops) {
@@ -502,12 +505,12 @@ function findClosestStopByLocation(stops, lat, lon) {
         const firstStop = stops[0];
 
         const map = new mapboxgl.Map({
-            container:  "cesiumContainer",
-            style:      currentStyle === "satellite" ? SATELLITE_STYLE : STANDARD_STYLE,
-            center:     [firstStop.Longitude, firstStop.Latitude],
-            zoom:       LOCKED_ZOOM,
-            bearing:    0,
-            pitch:      0,
+            container: "cesiumContainer",
+            style: currentStyle === "satellite" ? SATELLITE_STYLE : STANDARD_STYLE,
+            center: [firstStop.Longitude, firstStop.Latitude],
+            zoom: LOCKED_ZOOM,
+            bearing: 0,
+            pitch: 0,
             projection: mapDimensionMode === "3d" ? "globe" : "mercator"
         });
 
@@ -578,37 +581,37 @@ function findClosestStopByLocation(stops, lat, lon) {
 
         // ── Route sentinels ───────────────────────────────────────────────────
 
-        const finalStop      = stops.find(s => Number(s.DR) === FINAL_DR) || stops[stops.length - 1];
-        const FINAL_ARRIVAL  = Number(finalStop.UnixArrivalArrival);
+        const finalStop = stops.find(s => Number(s.DR) === FINAL_DR) || stops[stops.length - 1];
+        const FINAL_ARRIVAL = Number(finalStop.UnixArrivalArrival);
 
-        const takeoffStop     = stops.find(s => Number(s.DR) === TAKEOFF_DR) || stops.find(s => Number(s.DR) >= TAKEOFF_DR);
+        const takeoffStop = stops.find(s => Number(s.DR) === TAKEOFF_DR) || stops.find(s => Number(s.DR) >= TAKEOFF_DR);
         const TAKEOFF_ARRIVAL = takeoffStop ? Number(takeoffStop.UnixArrivalArrival) : null;
 
         // ── Remaining session state ───────────────────────────────────────────
 
-        let isDelivering            = false;
-        let currentSegDR            = null;
+        let isDelivering = false;
+        let currentSegDR = null;
         let currentTravelBearingDeg = 0;
-        let currentTravelDirection  = null;
-        let cinematicBearing        = 0;
-        let lastSegMode             = null;
-        let lastSegToIndex          = null;
+        let currentTravelDirection = null;
+        let cinematicBearing = 0;
+        let lastSegMode = null;
+        let lastSegToIndex = null;
 
         // Viewer-location ETA state
-        let viewerLocation    = null;
+        let viewerLocation = null;
         let viewerClosestStop = null;
-        let viewerEtaError    = false;
+        let viewerEtaError = false;
 
         // City panel state
-        let currentCityStop     = null;
+        let currentCityStop = null;
         let currentCityTimezone = null;
 
         // ── Camera lock ───────────────────────────────────────────────────────
 
         function getLockedZoom() {
             if (currentSegDR !== null && Number.isFinite(currentSegDR)) {
-                if (currentSegDR < TAKEOFF_DR)  return LOCKED_ZOOM_PRE;
-                if (currentSegDR === FINAL_DR)  return LOCKED_ZOOM_PRE;
+                if (currentSegDR < TAKEOFF_DR) return LOCKED_ZOOM_PRE;
+                if (currentSegDR === FINAL_DR) return LOCKED_ZOOM_PRE;
             }
             return LOCKED_ZOOM;
         }
@@ -617,10 +620,10 @@ function findClosestStopByLocation(stops, lat, lon) {
             if (!isLocked || !bunnyMarker) return;
             const useCine = cinematicCamEnabled;
             map.jumpTo({
-                center:  bunnyMarker.getLngLat(),
-                zoom:    useCine ? cinematicZoom          : getLockedZoom(),
-                pitch:   useCine ? CINEMATIC_LOCKED_PITCH : 0,
-                bearing: useCine ? cinematicBearing       : 0
+                center: bunnyMarker.getLngLat(),
+                zoom: useCine ? cinematicZoom : getLockedZoom(),
+                pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
+                bearing: useCine ? cinematicBearing : 0
             });
         }
 
@@ -631,7 +634,7 @@ function findClosestStopByLocation(stops, lat, lon) {
             if (btn) {
                 btn.setAttribute("aria-pressed", String(isLocked));
                 btn.textContent = isLocked ? "🔓 Unlock Camera" : "🔒 Lock to Bunny";
-                btn.title       = isLocked ? "Unlock camera"    : "Lock camera to Bunny";
+                btn.title = isLocked ? "Unlock camera" : "Lock camera to Bunny";
             }
 
             if (isLocked) {
@@ -646,10 +649,10 @@ function findClosestStopByLocation(stops, lat, lon) {
                 if (bunnyMarker) {
                     const useCine = cinematicCamEnabled;
                     map.easeTo({
-                        center:  bunnyMarker.getLngLat(),
-                        zoom:    useCine ? cinematicZoom          : getLockedZoom(),
-                        pitch:   useCine ? CINEMATIC_LOCKED_PITCH : 0,
-                        bearing: useCine ? cinematicBearing       : 0,
+                        center: bunnyMarker.getLngLat(),
+                        zoom: useCine ? cinematicZoom : getLockedZoom(),
+                        pitch: useCine ? CINEMATIC_LOCKED_PITCH : 0,
+                        bearing: useCine ? cinematicBearing : 0,
                         duration: 800
                     });
                 }
@@ -685,8 +688,8 @@ function findClosestStopByLocation(stops, lat, lon) {
             ].join(";");
 
             const img = document.createElement("img");
-            img.src   = "assets/img/Bunny.png";
-            img.alt   = "Easter Bunny";
+            img.src = "assets/img/Bunny.png";
+            img.alt = "Easter Bunny";
             img.style.cssText = [
                 "position:absolute", "left:50%", "bottom:0",
                 "transform:translateX(-50%) translateY(4px)",
@@ -706,7 +709,7 @@ function findClosestStopByLocation(stops, lat, lon) {
         }
 
         function addBasketForStop(stop) {
-            const dr  = Number(stop.DR);
+            const dr = Number(stop.DR);
             if (Number.isFinite(dr) && dr < BASKET_START_DR) return;
 
             const key = stop.DR ?? `${stop.UnixArrival}`;
@@ -714,12 +717,12 @@ function findClosestStopByLocation(stops, lat, lon) {
 
             const cityName = cityLabel(stop);
             const descHtml = stop.WikipediaUrl
-                ? `More info: <a href="${stop.WikipediaUrl}" target="_blank" rel="noopener noreferrer">${cityName}</a>`
+                ? `<span style="color:#333;">More info:</span> <a href="${stop.WikipediaUrl}" target="_blank" rel="noopener noreferrer">${cityName}</a>`
                 : cityName;
 
             const img = document.createElement("img");
-            img.src   = "assets/img/Basket.png";
-            img.alt   = cityName;
+            img.src = "assets/img/Basket.png";
+            img.alt = cityName;
             img.style.cssText = "width:24px;height:24px;";
 
             const marker = new mapboxgl.Marker({ element: img, anchor: "bottom" })
@@ -736,8 +739,8 @@ function findClosestStopByLocation(stops, lat, lon) {
         // ── Egg delivery FX ───────────────────────────────────────────────────
 
         const eggImg = document.createElement("img");
-        eggImg.src   = "assets/img/Egg.png";
-        eggImg.alt   = "";
+        eggImg.src = "assets/img/Egg.png";
+        eggImg.alt = "";
         eggImg.style.cssText = [
             "position:absolute", "width:22px", "height:26px",
             "pointer-events:none", "opacity:0", "z-index:2",
@@ -752,19 +755,19 @@ function findClosestStopByLocation(stops, lat, lon) {
                 return;
             }
 
-            const phase   = (timestamp / 1000) % 1;
-            const fadeIn  = 0.15;
+            const phase = (timestamp / 1000) % 1;
+            const fadeIn = 0.15;
             const fadeOut = 0.20;
 
             let a = 1;
-            if      (phase < fadeIn)       a = phase / fadeIn;
-            else if (phase > 1 - fadeOut)  a = (1 - phase) / fadeOut;
+            if (phase < fadeIn) a = phase / fadeIn;
+            else if (phase > 1 - fadeOut) a = (1 - phase) / fadeOut;
 
-            const pt     = map.project(bunnyMarker.getLngLat());
+            const pt = map.project(bunnyMarker.getLngLat());
             const risePx = phase * 28;
 
-            eggImg.style.left    = `${pt.x}px`;
-            eggImg.style.top     = `${pt.y - 44 - risePx}px`;
+            eggImg.style.left = `${pt.x}px`;
+            eggImg.style.top = `${pt.y - 44 - risePx}px`;
             eggImg.style.opacity = `${Math.max(0, Math.min(1, a))}`;
 
             requestAnimationFrame(animateEgg);
@@ -774,10 +777,10 @@ function findClosestStopByLocation(stops, lat, lon) {
 
         // ── HUD DOM refs ──────────────────────────────────────────────────────
 
-        const statStatusRow        = $("statStatus")        ?.closest(".hud-row") ?? null;
-        const statEtaRow           = $("statEta")           ?.closest(".hud-row") ?? null;
-        const statDurationRow      = $("statDuration")      ?.closest(".hud-row") ?? null;
-        const statStopRemainingRow = $("statStopRemaining") ?.closest(".hud-row") ?? null;
+        const statStatusRow = $("statStatus")?.closest(".hud-row") ?? null;
+        const statEtaRow = $("statEta")?.closest(".hud-row") ?? null;
+        const statDurationRow = $("statDuration")?.closest(".hud-row") ?? null;
+        const statStopRemainingRow = $("statStopRemaining")?.closest(".hud-row") ?? null;
 
         const statEtaLabelEl = (() => {
             const row = $("statEta")?.closest(".hud-row");
@@ -799,8 +802,8 @@ function findClosestStopByLocation(stops, lat, lon) {
         }
 
         function updateHUD({ status, lastText, etaSeconds, etaText, stopRemainingSeconds, speedKmh, speedMph, eggs, carrots }) {
-            $("statStatus").textContent = status   ?? "—";
-            $("statLast"  ).textContent = lastText ?? "—";
+            $("statStatus").textContent = status ?? "—";
+            $("statLast").textContent = lastText ?? "—";
 
             $("statEta").textContent = typeof etaText === "string"
                 ? etaText
@@ -809,17 +812,17 @@ function findClosestStopByLocation(stops, lat, lon) {
             $("statStopRemaining").textContent = formatDurationWords(stopRemainingSeconds);
 
             if (Number.isFinite(speedKmh) && Number.isFinite(speedMph)) {
-                const km  = Math.round(speedKmh);
+                const km = Math.round(speedKmh);
                 const mph = Math.round(speedMph);
 
                 $("statSpeed").textContent = speedUnitMode === "kmh"
-                    ? `${Math.abs(km)  >= 1000 ? formatInt(km)  : km} km/h`
+                    ? `${Math.abs(km) >= 1000 ? formatInt(km) : km} km/h`
                     : `${Math.abs(mph) >= 1000 ? formatInt(mph) : mph} mph`;
             } else {
                 $("statSpeed").textContent = "—";
             }
 
-            $("statEggs"   ).textContent = formatInt(eggs);
+            $("statEggs").textContent = formatInt(eggs);
             $("statCarrots").textContent = formatInt(carrots);
         }
 
@@ -847,13 +850,13 @@ function findClosestStopByLocation(stops, lat, lon) {
 
         // ── City panel ────────────────────────────────────────────────────────
 
-        const cityPanel        = $("cityPanel");
-        const cityTitleEl      = $("cityTitle");
-        const cityLocalTimeEl  = $("cityLocalTime");
-        const cityWeatherEl    = $("cityWeather");
+        const cityPanel = $("cityPanel");
+        const cityTitleEl = $("cityTitle");
+        const cityLocalTimeEl = $("cityLocalTime");
+        const cityWeatherEl = $("cityWeather");
         const cityPopulationEl = $("cityPopulation");
-        const cityElevationEl  = $("cityElevation");
-        const cityDirectionEl  = $("cityDirection");
+        const cityElevationEl = $("cityElevation");
+        const cityDirectionEl = $("cityDirection");
 
         const CITY_PANEL_COLLAPSE_KEY = "eb_cityPanel_collapsed_v1";
         let cityPanelCollapsed = (localStorage.getItem(CITY_PANEL_COLLAPSE_KEY) === "1");
@@ -866,16 +869,16 @@ function findClosestStopByLocation(stops, lat, lon) {
                 r.style.display = cityPanelCollapsed ? "none" : "";
             });
 
-            const hr     = cityPanel.querySelector("hr");
+            const hr = cityPanel.querySelector("hr");
             const footer = cityPanel.querySelector("footer");
-            if (hr)     hr.style.display     = cityPanelCollapsed ? "none" : "";
+            if (hr) hr.style.display = cityPanelCollapsed ? "none" : "";
             if (footer) footer.style.display = cityPanelCollapsed ? "none" : "";
 
             const btn = cityPanel.querySelector(".city-collapse-btn");
             if (btn) {
                 btn.setAttribute("aria-pressed", String(cityPanelCollapsed));
                 btn.textContent = cityPanelCollapsed ? "▾" : "▴";
-                btn.title       = cityPanelCollapsed ? "Expand" : "Minimize";
+                btn.title = cityPanelCollapsed ? "Expand" : "Minimize";
                 btn.setAttribute("aria-label", cityPanelCollapsed ? "Expand city panel" : "Minimize city panel");
             }
         }
@@ -893,7 +896,7 @@ function findClosestStopByLocation(stops, lat, lon) {
             }
 
             const btn = document.createElement("button");
-            btn.type      = "button";
+            btn.type = "button";
             btn.className = "city-collapse-btn";
             btn.style.cssText = [
                 "position:absolute", "top:6px", "left:6px",
@@ -919,28 +922,28 @@ function findClosestStopByLocation(stops, lat, lon) {
 
             if (Number.isFinite(FINAL_ARRIVAL) && now >= FINAL_ARRIVAL) {
                 cityPanel.hidden = true;
-                currentCityStop  = null;
+                currentCityStop = null;
                 applyCityPanelCollapsed();
                 return;
             }
 
-            const s = seg?.mode === "stop"   ? stops[seg.i]  :
-                      seg?.mode === "travel" ? stops[seg.to] :
-                      stops[0];
+            const s = seg?.mode === "stop" ? stops[seg.i] :
+                seg?.mode === "travel" ? stops[seg.to] :
+                    stops[0];
 
             if (!s) { cityPanel.hidden = true; currentCityStop = null; return; }
 
             const dr = Number(s.DR);
             if (!Number.isFinite(dr) || dr < CITY_PANEL_MIN_DR) {
                 cityPanel.hidden = true;
-                currentCityStop  = null;
+                currentCityStop = null;
                 return;
             }
 
             cityPanel.hidden = false;
-            currentCityStop  = s;
+            currentCityStop = s;
 
-            if (cityTitleEl)      cityTitleEl.textContent = `Information about: ${s.City || "Unknown city"}`;
+            if (cityTitleEl) cityTitleEl.textContent = `Information about: ${s.City || "Unknown city"}`;
 
             if (cityPopulationEl) {
                 const pop = Number(s.PopulationNum);
@@ -990,7 +993,7 @@ function findClosestStopByLocation(stops, lat, lon) {
                 if (statDurationEl) statDurationEl.textContent = "Unknown";
                 return;
             }
-            viewerLocation    = loc;
+            viewerLocation = loc;
             viewerClosestStop = findClosestStopByLocation(stops, loc.lat, loc.lon);
         }).catch(err => {
             console.warn("Viewer location lookup failed:", err);
@@ -1033,10 +1036,10 @@ function findClosestStopByLocation(stops, lat, lon) {
         if (mapStyleBtn) {
             updateMapStyleButton();
             mapStyleBtn.addEventListener("click", () => {
-                const center  = map.getCenter();
-                const zoom    = map.getZoom();
+                const center = map.getCenter();
+                const zoom = map.getZoom();
                 const bearing = map.getBearing();
-                const pitch   = map.getPitch();
+                const pitch = map.getPitch();
 
                 currentStyle = currentStyle === "standard" ? "satellite" : "standard";
                 saveSettings({ mapStyle: currentStyle });
@@ -1057,19 +1060,19 @@ function findClosestStopByLocation(stops, lat, lon) {
         }
 
         function updateCinematicOffsetUI() {
-            const offsetWrap   = $("cineOffsetWrap");
+            const offsetWrap = $("cineOffsetWrap");
             const offsetSlider = $("cineOffsetSlider");
-            const offsetVal    = $("cineOffsetVal");
-            const zoomWrap     = $("cineZoomWrap");
-            const zoomSlider   = $("cineZoomSlider");
-            const zoomVal      = $("cineZoomVal");
+            const offsetVal = $("cineOffsetVal");
+            const zoomWrap = $("cineZoomWrap");
+            const zoomSlider = $("cineZoomSlider");
+            const zoomVal = $("cineZoomVal");
 
-            if (offsetWrap)   offsetWrap.hidden    = !cinematicCamEnabled;
-            if (zoomWrap)     zoomWrap.hidden       = !cinematicCamEnabled;
-            if (offsetSlider) offsetSlider.value    = clampDeg0to180(cinematicSideOffsetDeg);
-            if (offsetVal)    offsetVal.textContent = `${clampDeg0to180(cinematicSideOffsetDeg)}°`;
-            if (zoomSlider)   zoomSlider.value      = clampZoom1to10(cinematicZoom);
-            if (zoomVal)      zoomVal.textContent   = clampZoom1to10(cinematicZoom);
+            if (offsetWrap) offsetWrap.hidden = !cinematicCamEnabled;
+            if (zoomWrap) zoomWrap.hidden = !cinematicCamEnabled;
+            if (offsetSlider) offsetSlider.value = clampDeg0to180(cinematicSideOffsetDeg);
+            if (offsetVal) offsetVal.textContent = `${clampDeg0to180(cinematicSideOffsetDeg)}°`;
+            if (zoomSlider) zoomSlider.value = clampZoom1to10(cinematicZoom);
+            if (zoomVal) zoomVal.textContent = clampZoom1to10(cinematicZoom);
         }
 
         const cinematicCamBtn = $("cinematicCamBtn");
@@ -1156,8 +1159,8 @@ function findClosestStopByLocation(stops, lat, lon) {
 
         // ── Help modal ────────────────────────────────────────────────────────
 
-        const helpBtn      = $("helpBtn");
-        const helpOverlay  = $("helpOverlay");
+        const helpBtn = $("helpBtn");
+        const helpOverlay = $("helpOverlay");
         const helpCloseBtn = $("helpCloseBtn");
 
         function openHelp() {
@@ -1176,11 +1179,11 @@ function findClosestStopByLocation(stops, lat, lon) {
 
         function setHelpTab(tabKey) {
             if (!helpOverlay) return;
-            helpOverlay.querySelectorAll(".help-tab" ).forEach(t => t.classList.toggle("is-active", t.dataset.tab  === tabKey));
+            helpOverlay.querySelectorAll(".help-tab").forEach(t => t.classList.toggle("is-active", t.dataset.tab === tabKey));
             helpOverlay.querySelectorAll(".help-pane").forEach(p => p.classList.toggle("is-active", p.dataset.pane === tabKey));
         }
 
-        if (helpBtn)      helpBtn.addEventListener("click", openHelp);
+        if (helpBtn) helpBtn.addEventListener("click", openHelp);
         if (helpCloseBtn) helpCloseBtn.addEventListener("click", closeHelp);
 
         helpOverlay?.querySelector(".help-tabs")?.addEventListener("click", e => {
@@ -1197,14 +1200,14 @@ function findClosestStopByLocation(stops, lat, lon) {
         let musicEnabled = typeof initialSettings.musicEnabled === "boolean"
             ? initialSettings.musicEnabled
             : true;
-        let bgAudio            = null;
+        let bgAudio = null;
         let musicResumePending = false;
 
         function initBgMusic() {
             if (bgAudio) return;
 
-            bgAudio        = new Audio("assets/audio/music.mp3");
-            bgAudio.loop   = false;
+            bgAudio = new Audio("assets/audio/music.mp3");
+            bgAudio.loop = false;
             bgAudio.volume = MUSIC_VOLUME;
 
             bgAudio.addEventListener("ended", () => {
@@ -1214,8 +1217,8 @@ function findClosestStopByLocation(stops, lat, lon) {
                     try {
                         bgAudio.currentTime = 0;
                         bgAudio.play()
-                            ?.then (() => { musicResumePending = false; })
-                            ?.catch(() => { musicResumePending = true;  });
+                            ?.then(() => { musicResumePending = false; })
+                            ?.catch(() => { musicResumePending = true; });
                     } catch { musicResumePending = true; }
                 }, 1000);
             });
@@ -1224,7 +1227,7 @@ function findClosestStopByLocation(stops, lat, lon) {
 
             try {
                 bgAudio.play()
-                    ?.then (() => { musicResumePending = false; })
+                    ?.then(() => { musicResumePending = false; })
                     ?.catch(err => {
                         console.warn("Autoplay blocked:", err);
                         musicResumePending = true;
@@ -1247,8 +1250,8 @@ function findClosestStopByLocation(stops, lat, lon) {
             if (musicEnabled) {
                 try {
                     bgAudio.play()
-                        ?.then (() => { musicResumePending = false; })
-                        ?.catch(() => { musicResumePending = true;  });
+                        ?.then(() => { musicResumePending = false; })
+                        ?.catch(() => { musicResumePending = true; });
                 } catch { musicResumePending = true; }
             } else {
                 bgAudio.pause();
@@ -1259,7 +1262,7 @@ function findClosestStopByLocation(stops, lat, lon) {
         function handleUserInteractionForMusic() {
             if (!musicEnabled || !bgAudio || !musicResumePending) return;
             musicResumePending = false;
-            try { bgAudio.play()?.catch(() => {}); } catch {}
+            try { bgAudio.play()?.catch(() => { }); } catch { }
         }
 
         ["pointerdown", "click", "keydown", "touchstart"].forEach(ev => {
@@ -1285,20 +1288,23 @@ function findClosestStopByLocation(stops, lat, lon) {
 
             const seg = findSegment(now, stops, TAKEOFF_ARRIVAL);
 
+            speedJitter += (Math.random() - 0.5) * 0.8;
+            speedJitter = Math.max(-3, Math.min(3, speedJitter));
+
             // Update currentSegDR so getLockedZoom() always reflects the current phase
             currentSegDR =
-                seg.mode === "stop"   ? Number(stops[seg.i]?.DR   ?? null) :
-                seg.mode === "travel" ? Number(stops[seg.to]?.DR  ?? null) :
-                null;
+                seg.mode === "stop" ? Number(stops[seg.i]?.DR ?? null) :
+                    seg.mode === "travel" ? Number(stops[seg.to]?.DR ?? null) :
+                        null;
 
             // Track the most recent travel destination for city panel continuity
             if (seg.mode === "travel") {
                 const isNew = lastSegMode !== "travel" || lastSegToIndex !== seg.to;
                 if (isNew && stops[seg.to]) currentCityStop = stops[seg.to];
-                lastSegMode    = "travel";
+                lastSegMode = "travel";
                 lastSegToIndex = seg.to;
             } else {
-                lastSegMode    = seg.mode;
+                lastSegMode = seg.mode;
                 lastSegToIndex = null;
             }
 
@@ -1314,11 +1320,10 @@ function findClosestStopByLocation(stops, lat, lon) {
 
                 updateBunnyPosition(finalStop.Longitude, finalStop.Latitude);
 
-                if (statStatusRow) statStatusRow.style.display = "none";
-                if (statEtaRow)    statEtaRow.style.display    = "none";
+                if (statEtaRow) statEtaRow.style.display = "none";
 
                 updateHUD({
-                    status: "", lastText: cityLabel(finalStop),
+                    status: "Easter Island, Chile - The Easter Bunny has completed his journey", lastText: "—",
                     etaSeconds: NaN, etaText: "", stopRemainingSeconds: NaN,
                     speedKmh: NaN, speedMph: NaN,
                     eggs: finalStop.EggsDelivered, carrots: finalStop.CarrotsEaten
@@ -1359,8 +1364,8 @@ function findClosestStopByLocation(stops, lat, lon) {
 
             // ── At a stop ─────────────────────────────────────────────────────
             if (seg.mode === "stop") {
-                const s     = stops[seg.i];
-                const next  = stops[Math.min(seg.i + 1, stops.length - 1)];
+                const s = stops[seg.i];
+                const next = stops[Math.min(seg.i + 1, stops.length - 1)];
                 const drNow = Number(s.DR);
 
                 // Special case: DR 76 takeoff clearance stop
@@ -1413,28 +1418,29 @@ function findClosestStopByLocation(stops, lat, lon) {
                 let prevEggs = 0, prevCarrots = 0;
 
                 if (seg.i > 0) {
-                    const prev       = stops[seg.i - 1];
-                    const distKm     = haversineKm(prev.Latitude, prev.Longitude, s.Latitude, s.Longitude);
-                    const travelSec  = Math.max(1, s.UnixArrivalArrival - prev.UnixArrivalDeparture);
-                    speedKmh         = (distKm / travelSec) * 3600;
-                    speedMph         = speedKmh * 0.621371;
-                    prevEggs         = Number(prev.EggsDelivered) || 0;
-                    prevCarrots      = Number(prev.CarrotsEaten)  || 0;
+                    const prev = stops[seg.i - 1];
+                    const distKm = haversineKm(prev.Latitude, prev.Longitude, s.Latitude, s.Longitude);
+                    const travelSec = Math.max(1, s.UnixArrivalArrival - prev.UnixArrivalDeparture);
+                    speedKmh = (distKm / travelSec) * 3600;
+                    speedMph = speedKmh * 0.621371;
+                    prevEggs = Number(prev.EggsDelivered) || 0;
+                    prevCarrots = Number(prev.CarrotsEaten) || 0;
                 }
 
-                const cityEggs    = Number(s.EggsDelivered) || prevEggs;
-                const cityCarrots = Number(s.CarrotsEaten)  || prevCarrots;
+                const cityEggs = Number(s.EggsDelivered) || prevEggs;
+                const cityCarrots = Number(s.CarrotsEaten) || prevCarrots;
                 const stopDuration = Math.max(1, s.UnixArrivalDeparture - s.UnixArrivalArrival);
-                const stopT        = clamp01((now - s.UnixArrivalArrival) / stopDuration);
+                const stopT = clamp01((now - s.UnixArrivalArrival) / stopDuration);
 
                 updateHUD({
-                    status:              `Delivering in ${s.City}`,
-                    lastText:            before77 ? "N/A" : (seg.i > 0 ? cityLabel(stops[seg.i - 1]) : "—"),
-                    etaText:             `Currently delivering eggs in ${s.City}`,
-                    etaSeconds:          NaN,
+                    status: `Delivering in ${s.City}`,
+                    lastText: before77 ? "N/A" : (seg.i > 0 ? cityLabel(stops[seg.i - 1]) : "—"),
+                    etaText: `Currently delivering eggs in ${s.City}`,
+                    etaSeconds: NaN,
                     stopRemainingSeconds: stopRemaining,
-                    speedKmh, speedMph,
-                    eggs:    lerp(prevEggs,    cityEggs,    stopT),
+                    speedKmh: Number.isFinite(speedKmh) ? speedKmh + speedJitter : NaN,
+                    speedMph: Number.isFinite(speedMph) ? speedMph + speedJitter : NaN,
+                    eggs: lerp(prevEggs, cityEggs, stopT),
                     carrots: lerp(prevCarrots, cityCarrots, stopT)
                 });
 
@@ -1445,40 +1451,41 @@ function findClosestStopByLocation(stops, lat, lon) {
             // ── Travelling between stops ──────────────────────────────────────
             else if (seg.mode === "travel") {
                 const from = stops[seg.from];
-                const to   = stops[seg.to];
+                const to = stops[seg.to];
                 if (!from || !to) return;
 
                 if ([from.Latitude, from.Longitude, to.Latitude, to.Longitude].every(Number.isFinite)) {
                     currentTravelBearingDeg = bearingDeg(from.Latitude, from.Longitude, to.Latitude, to.Longitude);
-                    cinematicBearing        = (currentTravelBearingDeg + cinematicSideOffsetDeg) % 360;
+                    cinematicBearing = (currentTravelBearingDeg + cinematicSideOffsetDeg) % 360;
                 }
 
-                const toDr             = Number(to.DR);
+                const toDr = Number(to.DR);
                 const preTakeoffTravel = Number.isFinite(toDr) && toDr < TAKEOFF_DR;
-                const showRegion       = Number.isFinite(toDr) && toDr >= 76;
-                const destLabel        = showRegion ? cityLabel(to) : cityOnly(to);
-                const statusText       = preTakeoffTravel ? (to.City || "Preparing…") : `Heading to: ${destLabel}`;
+                const showRegion = Number.isFinite(toDr) && toDr >= 76;
+                const destLabel = showRegion ? cityLabel(to) : cityOnly(to);
+                const statusText = preTakeoffTravel ? (to.City || "Preparing…") : `Heading to: ${destLabel}`;
 
-                const departT  = from.UnixArrivalDeparture;
-                const arriveT  = to.UnixArrivalArrival;
-                const denom    = Math.max(1, arriveT - departT);
-                const t        = clamp01((now - departT) / denom);
-                const pos      = interpolateLatLon(from, to, t);
+                const departT = from.UnixArrivalDeparture;
+                const arriveT = to.UnixArrivalArrival;
+                const denom = Math.max(1, arriveT - departT);
+                const t = clamp01((now - departT) / denom);
+                const pos = interpolateLatLon(from, to, t);
 
                 updateBunnyPosition(pos.lon, pos.lat);
 
-                const distKm   = haversineKm(from.Latitude, from.Longitude, to.Latitude, to.Longitude);
+                const distKm = haversineKm(from.Latitude, from.Longitude, to.Latitude, to.Longitude);
                 const speedKmh = preTakeoffTravel ? NaN : (distKm / denom) * 3600;
                 const speedMph = preTakeoffTravel ? NaN : speedKmh * 0.621371;
 
                 updateHUD({
-                    status:              statusText,
-                    lastText:            before77 ? "N/A" : cityLabel(from),
-                    etaSeconds:          etaForHUD(now, arriveT - now, TAKEOFF_ARRIVAL),
+                    status: statusText,
+                    lastText: before77 ? "N/A" : cityLabel(from),
+                    etaSeconds: etaForHUD(now, arriveT - now, TAKEOFF_ARRIVAL),
                     stopRemainingSeconds: NaN,
-                    speedKmh, speedMph,
-                    eggs:    preTakeoffTravel ? 0 : lerp(Number(from.EggsDelivered) || 0, Number(to.EggsDelivered) || 0, t),
-                    carrots: preTakeoffTravel ? 0 : lerp(Number(from.CarrotsEaten)  || 0, Number(to.CarrotsEaten)  || 0, t)
+                    speedKmh: Number.isFinite(speedKmh) ? speedKmh + speedJitter : NaN,
+                    speedMph: Number.isFinite(speedMph) ? speedMph + speedJitter : NaN,
+                    eggs: preTakeoffTravel ? 0 : lerp(Number(from.EggsDelivered) || 0, Number(to.EggsDelivered) || 0, t),
+                    carrots: preTakeoffTravel ? 0 : lerp(Number(from.CarrotsEaten) || 0, Number(to.CarrotsEaten) || 0, t)
                 });
 
                 followBunnyIfLocked();
