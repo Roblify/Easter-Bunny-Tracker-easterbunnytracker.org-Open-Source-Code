@@ -300,7 +300,6 @@
   </div>
 
   <div id="cityPanel" class="city-panel" hidden>
-    <!-- Give the title an ID so JS can change it -->
     <div id="cityTitle" class="city-panel-title">Current city info</div>
 
     <div class="city-panel-row">
@@ -326,6 +325,11 @@
     <hr>
     <footer>Note: The information listed here may not always be accurate.</footer>
   </div>
+
+  <!-- City info toggle — always visible, sits above the lock button -->
+  <button id="cityInfoToggleBtn" type="button" aria-pressed="true" title="Show/hide city info panel">
+    🏙️ Hide City Info
+  </button>
 
   <button id="lockBtn" type="button" aria-pressed="true" title="Unlock camera">
     🔓 Unlock Camera
