@@ -1322,6 +1322,8 @@ function findClosestStopByLocation(stops, lat, lon) {
 
                 if (statEtaRow) statEtaRow.style.display = "none";
 
+                currentSegDR = FINAL_DR;
+
                 updateHUD({
                     status: "Easter Island, Chile - The Easter Bunny has completed his journey", lastText: "—",
                     etaSeconds: NaN, etaText: "", stopRemainingSeconds: NaN,
