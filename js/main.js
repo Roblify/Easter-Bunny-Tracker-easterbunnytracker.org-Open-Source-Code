@@ -863,8 +863,9 @@ function findClosestStopByLocation(stops, lat, lon) {
         const cityElevationEl = $("cityElevation");
         const cityDirectionEl = $("cityDirection");
  
-        const CITY_PANEL_COLLAPSE_KEY = "eb_cityPanel_collapsed_v1";
-        let cityPanelCollapsed = (localStorage.getItem(CITY_PANEL_COLLAPSE_KEY) === "1");
+        // City panel collapse state resets on every load — only the user's
+        // show/hide preference (set via the external button) is persisted.
+        let cityPanelCollapsed = false;
  
         function applyCityPanelCollapsed() {
             if (!cityPanel) return;
@@ -890,40 +891,14 @@ function findClosestStopByLocation(stops, lat, lon) {
  
         function initCityPanelCollapseUI() {
             if (!cityPanel) return;
- 
-            const cs = window.getComputedStyle(cityPanel);
-            if (cs.position === "static") cityPanel.style.position = "relative";
- 
-            // Guard against double-init
-            if (cityPanel.querySelector(".city-collapse-btn")) {
-                applyCityPanelCollapsed();
-                return;
-            }
- 
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "city-collapse-btn";
-            btn.style.cssText = [
-                "position:absolute", "top:6px", "left:6px",
-                "width:26px", "height:26px", "border-radius:8px",
-                "border:1px solid rgba(255,255,255,.25)",
-                "background:rgba(0,0,0,.35)", "color:white",
-                "cursor:pointer", "display:grid", "place-items:center",
-                "padding:0", "z-index:2"
-            ].join(";");
- 
-            btn.addEventListener("click", () => {
-                cityPanelCollapsed = !cityPanelCollapsed;
-                localStorage.setItem(CITY_PANEL_COLLAPSE_KEY, cityPanelCollapsed ? "1" : "0");
-                applyCityPanelCollapsed();
-            });
- 
-            cityPanel.appendChild(btn);
             applyCityPanelCollapsed();
         }
  
         function updateCityPanel(now, seg) {
             if (!cityPanel) return;
+ 
+            // User has manually hidden the panel — leave it hidden until they toggle it back
+            if (!cityInfoUserVisible) return;
  
             if (Number.isFinite(FINAL_ARRIVAL) && now >= FINAL_ARRIVAL) {
                 cityPanel.hidden = true;
@@ -1161,6 +1136,32 @@ function findClosestStopByLocation(stops, lat, lon) {
  
         const lockBtn = $("lockBtn");
         if (lockBtn) lockBtn.addEventListener("click", () => setLocked(!isLocked));
+ 
+        // -- City info toggle button ------------------------------------------
+        // Always visible regardless of DR phase. Does NOT persist across refreshes
+        // — the panel always comes back on reload.
+ 
+        // Default true — only false if the user explicitly hid it last session
+        let cityInfoUserVisible = localStorage.getItem("eb_cityInfo_visible_v1") !== "0";
+ 
+        function updateCityInfoToggleBtn() {
+            const btn = $("cityInfoToggleBtn");
+            if (!btn) return;
+            btn.setAttribute("aria-pressed", String(cityInfoUserVisible));
+            btn.textContent = cityInfoUserVisible ? "\uD83C\uDFD9\uFE0F Hide City Info" : "\uD83C\uDFD9\uFE0F Show City Info";
+            btn.title = cityInfoUserVisible ? "Hide city info panel" : "Show city info panel";
+        }
+ 
+        const cityInfoToggleBtn = $("cityInfoToggleBtn");
+        if (cityInfoToggleBtn) {
+            cityInfoToggleBtn.addEventListener("click", () => {
+                cityInfoUserVisible = !cityInfoUserVisible;
+                localStorage.setItem("eb_cityInfo_visible_v1", cityInfoUserVisible ? "1" : "0");
+                updateCityInfoToggleBtn();
+                if (!cityInfoUserVisible && cityPanel) cityPanel.hidden = true;
+            });
+        }
+        updateCityInfoToggleBtn();
  
         // -- Help modal -------------------------------------------------------
  
