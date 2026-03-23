@@ -897,11 +897,11 @@ function findClosestStopByLocation(stops, lat, lon) {
         function updateCityPanel(now, seg) {
             if (!cityPanel) return;
  
-            // User has manually hidden the panel — leave it hidden until they toggle it back
-            if (!cityInfoUserVisible) return;
+            const toggleBtn = $("cityInfoToggleBtn");
  
             if (Number.isFinite(FINAL_ARRIVAL) && now >= FINAL_ARRIVAL) {
                 cityPanel.hidden = true;
+                if (toggleBtn) toggleBtn.hidden = true;
                 currentCityStop = null;
                 applyCityPanelCollapsed();
                 return;
@@ -916,10 +916,17 @@ function findClosestStopByLocation(stops, lat, lon) {
             const dr = Number(s.DR);
             if (!Number.isFinite(dr) || dr < CITY_PANEL_MIN_DR) {
                 cityPanel.hidden = true;
+                if (toggleBtn) toggleBtn.hidden = true;
                 currentCityStop = null;
                 return;
             }
- 
+
+            // Journey has begun — show the toggle button
+            if (toggleBtn) toggleBtn.hidden = false;
+
+            // User has manually hidden the panel — keep button visible but panel hidden
+            if (!cityInfoUserVisible) return;
+
             cityPanel.hidden = false;
             currentCityStop = s;
  
@@ -1138,8 +1145,7 @@ function findClosestStopByLocation(stops, lat, lon) {
         if (lockBtn) lockBtn.addEventListener("click", () => setLocked(!isLocked));
  
         // -- City info toggle button ------------------------------------------
-        // Always visible regardless of DR phase. Does NOT persist across refreshes
-        // — the panel always comes back on reload.
+        // Hidden during countdown (DR < 77), visible once the journey begins.
  
         // Default true — only false if the user explicitly hid it last session
         let cityInfoUserVisible = localStorage.getItem("eb_cityInfo_visible_v1") !== "0";
