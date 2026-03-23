@@ -169,7 +169,7 @@ function formatViewerEtaText(deltaSeconds) {
     const isHalf = Math.abs(rounded - whole - 0.5) < 1e-6;
  
     if (!isHalf) return `${rounded.toFixed(0)} ${rounded.toFixed(0) === "1" ? "hour" : "hours"}`;
-    if (whole === 0) return "\u00bd hour";
+    if (whole === 0) return "Less than an hour";
     return `${whole}\u00bd hours`;
 }
  
