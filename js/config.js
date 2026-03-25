@@ -16,14 +16,14 @@
 
 const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY";
 
-// NOTE: IPInfo tokens cannot be truly hidden in client-side JavaScript — any
-// visitor can read the page source or intercept the network request and extract
-// the token regardless of how it is encoded.  The only proper solution is to
-// proxy the IPInfo request through your own server-side endpoint (e.g. a
-// Cloudflare Worker or serverless function) so the token never reaches the
-// browser.  Until then, restrict this token to your domain in the IPInfo
-// dashboard (ipinfo.io → Token settings → "Allowed domains") to limit misuse.
-const _IPT = atob("YOUR_IPINFO_TOKEN");
+// NOTE: IPInfo tokens cannot be hidden in client-side JavaScript — any visitor
+// can read the page source or intercept the network request and extract it.
+// The only proper solution is to proxy the IPInfo request through your own
+// server-side endpoint (e.g. a Cloudflare Worker or serverless function) so the
+// token never reaches the browser.  Until then, restrict this token to your
+// domain in the IPInfo dashboard (ipinfo.io → Token settings → "Allowed domains")
+// to limit misuse.
+const _IPT = "YOUR_IPINFO_TOKEN";
 
 const ROUTE_FILE = "data/route.json";
 
