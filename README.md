@@ -35,7 +35,12 @@ The official open-source codebase for [easterbunnytracker.org](https://easterbun
 ├── data/
 │   └── route.json      # The Easter Bunny's full route data
 ├── js/
-│   ├── main.js         # Core tracker logic
+│   ├── config.js       # Constants, settings persistence, user preferences
+│   ├── utils.js        # Pure helpers (formatting, math, geographic)
+│   ├── data.js         # Stop accessors, label builders, route loading
+│   ├── tracker.js      # Segment logic — the brain of the tracker
+│   ├── viewer.js       # IP-based viewer location lookup
+│   ├── main.js         # App init (Mapbox map, HUD, markers, tick loop)
 │   └── countdown.js    # Countdown timer logic
 ├── tools/              # Python utility scripts (route processing)
 ├── index.html          # Pre-journey countdown page
@@ -69,7 +74,7 @@ Both services have free tiers that are sufficient for running the tracker.
    cd Easter-Bunny-Tracker-easterbunnytracker.org-Open-Source-Code
    ```
 
-2. **Add your API keys** in `js/main.js`:
+2. **Add your API keys** in `js/config.js`:
    ```js
    const MAPBOX_TOKEN = "your_mapbox_token_here";
    const _IPT = atob("your_base64_encoded_ipinfo_token_here");
@@ -116,7 +121,7 @@ Both services have free tiers that are sufficient for running the tracker.
 
 ## ⚙️ Configuration
 
-Key constants at the top of `js/main.js` can be adjusted to suit your route:
+Key constants in `js/config.js` can be adjusted to suit your route:
 
 | Constant | Default | Description |
 |---|---|---|
