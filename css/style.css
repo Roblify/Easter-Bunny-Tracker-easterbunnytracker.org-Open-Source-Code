@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   EASTER BUNNY TRACKER — Polished Spring Night Theme
+   EASTER BUNNY TRACKER - Polished Spring Night Theme
    Aesthetic: Whimsical space-ops console meets pastel spring night
    ═══════════════════════════════════════════════════════════════ */
 
@@ -788,18 +788,35 @@ body::before {
   background: var(--border-strong);
 }
 
+/* ── HUD collapse toggle (visible only on mobile) ───────────────── */
+.hud-title-row {
+  display: contents; /* transparent on desktop — children behave normally */
+}
+
+.hud-toggle {
+  display: none; /* hidden on desktop */
+}
+
+/* On desktop, #hudStats is also transparent so rows flow directly into #hud's flex */
+#hudStats {
+  display: contents;
+}
+
 /* ══════════════════════════════════════════════════════════════════
    MOBILE
 ══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
+  /* ── HUD ──────────────────────────────────────────────────────── */
   #hud {
     top: 10px;
     left: 10px;
     right: 10px;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 11px 13px;
+    align-items: stretch;
+    gap: 0;
+    padding: 10px 13px;
+    /* Don't grow to fill viewport height */
+    max-height: 45vh;
   }
 
   #hud::before {
@@ -807,32 +824,145 @@ body::before {
     right: 12px;
   }
 
-  .hud-row {
-    width: 100%;
+  /* Title row: space title and toggle button apart */
+  .hud-title-row {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  /* Collapse toggle button */
+  .hud-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease-out),
+                transform var(--t-fast) var(--ease-spring);
+  }
+
+  .hud-toggle:active {
+    transform: scale(0.92);
+  }
+
+  /* Stats container: real box on mobile — scrollable and collapsible */
+  #hudStats {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-mid) transparent;
+    max-height: 999px;
+    transition: max-height var(--t-mid) var(--ease-out),
+                opacity var(--t-fast) var(--ease-out);
+  }
+
+  #hudStats.is-collapsed {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    margin-bottom: -2px;
+  }
+
+  .hud-toggle[aria-expanded="false"] {
+    transform: rotate(180deg);
+  }
+
+  /* Rows: allow wrapping, space label and value apart */
+  .hud-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+    white-space: normal;
+  }
+
+  .hud-row span:first-child {
+    flex-shrink: 0;
+    max-width: 48%;
+    white-space: normal;
+    line-height: 1.35;
   }
 
   .hud-row span:last-child {
     text-align: right;
+    flex-shrink: 1;
+    word-break: break-word;
+    min-width: 0;
   }
 
+  /* ── Bottom buttons: bigger touch targets + safe-area ─────────── */
+  #helpBtn {
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    min-height: 44px;
+    padding: 11px 16px;
+  }
+
+  #lockBtn {
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    min-height: 44px;
+    padding: 11px 16px;
+  }
+
+  #cityInfoToggleBtn {
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    min-height: 44px;
+    padding: 11px 16px;
+  }
+
+  /* ── Help modal ───────────────────────────────────────────────── */
   .help-body {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 
   .help-tabs {
     border-right: none;
     border-bottom: 1px solid var(--border-soft);
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 10px;
+    gap: 5px;
+  }
+
+  .help-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .help-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 36px;
   }
 
   .help-tab:hover {
     transform: none;
   }
 
+  .help-version {
+    display: none; /* no room for version in scrolling row */
+  }
+
+  /* ── City panel ───────────────────────────────────────────────── */
   .city-panel {
     max-width: calc(100vw - 28px);
+    right: 10px;
   }
 }
 
