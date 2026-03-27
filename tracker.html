@@ -39,7 +39,11 @@
 
   <!-- Top Stats Bar -->
   <div id="hud" aria-live="polite">
-    <div class="hud-title">Easter Bunny Tracker</div>
+    <div class="hud-title-row">
+      <div class="hud-title">Easter Bunny Tracker</div>
+      <button id="hudToggleBtn" class="hud-toggle" type="button" aria-label="Collapse stats" aria-expanded="true">▲</button>
+    </div>
+    <div id="hudStats" class="hud-stats">
     <div class="hud-row"><span>Status:</span><span id="statStatus">Loading…</span></div>
     <div class="hud-row"><span>Arriving in:</span><span id="statEta">—</span></div>
     <div class="hud-row"><span>Delivering for:</span><span id="statStopRemaining">—</span></div>
@@ -49,10 +53,24 @@
     <div class="hud-row"><span>Traveling speed:</span><span id="statSpeed">—</span></div>
     <div class="hud-row"><span>Eggs delivered:</span><span id="statEggs">—</span></div>
     <div class="hud-row"><span>Carrots eaten:</span><span id="statCarrots">—</span></div>
+    </div>
   </div>
 
   <!-- Mapbox GL JS script -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var btn = document.getElementById('hudToggleBtn');
+      var stats = document.getElementById('hudStats');
+      if (btn && stats) {
+        btn.addEventListener('click', function () {
+          var expanded = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!expanded));
+          stats.classList.toggle('is-collapsed', expanded);
+        });
+      }
+    });
+  </script>
   <script src="js/config.js" defer></script>
   <script src="js/utils.js" defer></script>
   <script src="js/data.js" defer></script>
