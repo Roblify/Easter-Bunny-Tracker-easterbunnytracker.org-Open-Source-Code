@@ -45,14 +45,14 @@
     </div>
     <div id="hudStats" class="hud-stats">
     <div class="hud-row"><span>Status:</span><span id="statStatus">Loading…</span></div>
-    <div class="hud-row"><span>Arriving in:</span><span id="statEta">—</span></div>
-    <div class="hud-row"><span>Delivering for:</span><span id="statStopRemaining">—</span></div>
+    <div class="hud-row"><span>Arriving in:</span><span id="statEta">-</span></div>
+    <div class="hud-row"><span>Delivering for:</span><span id="statStopRemaining">-</span></div>
     <div class="hud-row"><span>Easter Bunny will arrive at your location in about</span><span
         id="statDuration">Loading...</span></div>
-    <div class="hud-row"><span>Last spotted:</span><span id="statLast">—</span></div>
-    <div class="hud-row"><span>Traveling speed:</span><span id="statSpeed">—</span></div>
-    <div class="hud-row"><span>Eggs delivered:</span><span id="statEggs">—</span></div>
-    <div class="hud-row"><span>Carrots eaten:</span><span id="statCarrots">—</span></div>
+    <div class="hud-row"><span>Last spotted:</span><span id="statLast">-</span></div>
+    <div class="hud-row"><span>Traveling speed:</span><span id="statSpeed">-</span></div>
+    <div class="hud-row"><span>Eggs delivered:</span><span id="statEggs">-</span></div>
+    <div class="hud-row"><span>Carrots eaten:</span><span id="statCarrots">-</span></div>
     </div>
   </div>
 
@@ -72,6 +72,7 @@
     });
   </script>
   <script src="js/config.js" defer></script>
+  <script src="js/serverTime.js" defer></script>
   <script src="js/utils.js" defer></script>
   <script src="js/data.js" defer></script>
   <script src="js/tracker.js" defer></script>
@@ -327,11 +328,11 @@
 
     <div class="city-panel-row">
       <span>Time at city:</span>
-      <span id="cityLocalTime">—</span>
+      <span id="cityLocalTime">-</span>
     </div>
     <div class="city-panel-row">
       <span>More info:</span>
-      <span id="cityWeather">—</span>
+      <span id="cityWeather">-</span>
     </div>
     <div class="city-panel-row">
       <span>Traveling direction:</span>
@@ -339,17 +340,17 @@
     </div>
     <div class="city-panel-row">
       <span>Population:</span>
-      <span id="cityPopulation">—</span>
+      <span id="cityPopulation">-</span>
     </div>
     <div class="city-panel-row">
       <span>Elevation:</span>
-      <span id="cityElevation">—</span>
+      <span id="cityElevation">-</span>
     </div>
     <hr>
     <footer>Note: The information listed here may not always be accurate.</footer>
   </div>
 
-  <!-- City info toggle — hidden during countdown, shown once journey begins -->
+  <!-- City info toggle - hidden during countdown, shown once journey begins -->
   <button id="cityInfoToggleBtn" type="button" aria-pressed="true" title="Show/hide city info panel" hidden>
     🏙️ Hide City Info
   </button>
