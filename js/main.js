@@ -1,14 +1,14 @@
 /* =============================================================================
- *  Easter Bunny Tracker  —  main.js
+ *  Easter Bunny Tracker  -  main.js
  *
  *  9. Application Init  (Mapbox map, HUD, markers, tick loop)
  *
  *  Dependencies (loaded via <script> before this file):
- *    config.js  — constants, settings, preferences
- *    utils.js   — pure helpers (formatting, math, geo)
- *    data.js    — data helpers, route loading
- *    tracker.js — findSegment and segment classification
- *    viewer.js  — IP-based viewer location
+ *    config.js  - constants, settings, preferences
+ *    utils.js   - pure helpers (formatting, math, geo)
+ *    data.js    - data helpers, route loading
+ *    tracker.js - findSegment and segment classification
+ *    viewer.js  - IP-based viewer location
  * ============================================================================= */
 
 "use strict";
@@ -20,7 +20,7 @@
         // Redirects anyone who visits before April 4 2026 at 06:00 UTC back to index.html.
         // Remove or disable this once the journey is live.
         const PRE_JOURNEY_START_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
-        if (Date.now() < PRE_JOURNEY_START_UTC_MS) {
+        if (serverNow() < PRE_JOURNEY_START_UTC_MS) {
             window.location.replace("index.html");
             return;
         }
@@ -36,7 +36,8 @@
         if (statDurationEl) statDurationEl.textContent = "Loading...";
         $("statStatus").textContent = "Loading route\u2026";
 
-        const stops = await loadRoute();
+        // Sync server time and load route data in parallel
+        const [, stops] = await Promise.all([initServerTime(), loadRoute()]);
 
         // -- Mapbox setup -----------------------------------------------------
 
@@ -394,7 +395,7 @@
         const cityElevationEl = $("cityElevation");
         const cityDirectionEl = $("cityDirection");
 
-        // City panel collapse state resets on every load — only the user's
+        // City panel collapse state resets on every load - only the user's
         // show/hide preference (set via the external button) is persisted.
         let cityPanelCollapsed = false;
 
@@ -452,10 +453,10 @@
                 return;
             }
 
-            // Journey has begun — show the toggle button
+            // Journey has begun - show the toggle button
             if (toggleBtn) toggleBtn.hidden = false;
 
-            // User has manually hidden the panel — keep button visible but panel hidden
+            // User has manually hidden the panel - keep button visible but panel hidden
             if (!cityInfoUserVisible) return;
 
             cityPanel.hidden = false;
@@ -665,7 +666,7 @@
                 streamerModeEnabled = !streamerModeEnabled;
                 saveSettings({ streamerModeEnabled });
                 updateStreamerModeButton();
-                updateViewerLocationEta(Date.now() / 1000);
+                updateViewerLocationEta(serverNowSec());
             });
         }
         updateStreamerModeButton();
@@ -678,7 +679,7 @@
         // -- City info toggle button ------------------------------------------
         // Hidden during countdown (DR < 77), visible once the journey begins.
 
-        // Default true — only false if the user explicitly hid it last session
+        // Default true - only false if the user explicitly hid it last session
         let cityInfoUserVisible = localStorage.getItem("eb_cityInfo_visible_v1") !== "0";
 
         function updateCityInfoToggleBtn() {
@@ -829,7 +830,7 @@
         // -- Tick loop --------------------------------------------------------
 
         function tick() {
-            const now = Date.now() / 1000;
+            const now = serverNowSec();
             isDelivering = false;
 
             const seg = findSegment(now, stops, TAKEOFF_ARRIVAL);
