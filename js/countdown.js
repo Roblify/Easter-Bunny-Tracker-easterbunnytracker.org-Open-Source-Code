@@ -1,4 +1,4 @@
-(() => {
+(async () => {
   // April 4, 2026 @ 2:00 AM EDT
   // EDT is UTC-4, so this is 2026-04-04T06:00:00Z
   const TARGET_UTC_MS = Date.UTC(2026, 3, 4, 6, 0, 0);
@@ -11,6 +11,9 @@
 
   const pad2 = (n) => String(n).padStart(2, "0");
 
+  // Wait for server time sync before starting the countdown
+  await initServerTime();
+
   function redirectToTracker() {
     // Use replace so back button doesn't bounce people back into the countdown
     window.location.replace("tracker.html");
@@ -20,7 +23,7 @@
     // If countdown elements aren't present, don't crash
     if (!elD || !elH || !elM || !elS) return;
 
-    const now = Date.now();
+    const now = serverNow();
     const diff = TARGET_UTC_MS - now;
 
     if (diff <= 0) {
