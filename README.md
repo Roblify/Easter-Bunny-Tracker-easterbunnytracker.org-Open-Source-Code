@@ -19,6 +19,7 @@ The official open-source codebase for [easterbunnytracker.org](https://easterbun
 - **Streamer Mode** — Hides the viewer arrival estimate to prevent location inference on streams
 - **Background Music** — Looping Easter-themed audio with autoplay fallback handling
 - **Persistent Settings** — All user preferences are saved to `localStorage` automatically
+- **Server-Sided Timing** — All timing is synced from a server-side API to prevent client clock manipulation
 
 ---
 
@@ -36,6 +37,7 @@ The official open-source codebase for [easterbunnytracker.org](https://easterbun
 │   └── route.json      # The Easter Bunny's full route data
 ├── js/
 │   ├── config.js       # Constants, settings persistence, user preferences
+│   ├── serverTime.js   # Server-sided timing sync (clock offset from API)
 │   ├── utils.js        # Pure helpers (formatting, math, geographic)
 │   ├── data.js         # Stop accessors, label builders, route loading
 │   ├── tracker.js      # Segment logic — the brain of the tracker
@@ -131,6 +133,7 @@ Key constants in `js/config.js` can be adjusted to suit your route:
 | `LOCKED_ZOOM` | `5.2` | Map zoom during active delivery |
 | `LOCKED_ZOOM_PRE` | `3.5` | Map zoom before takeoff and at the final stop |
 | `MUSIC_VOLUME` | `0.2` | Background music volume (0.0 – 1.0) |
+| `TIMER_API_URL` | `https://api.easterbunnytracker.org/time` | Server-side timer API endpoint |
 
 ### Understanding DR (Delivery Readiness)
 
