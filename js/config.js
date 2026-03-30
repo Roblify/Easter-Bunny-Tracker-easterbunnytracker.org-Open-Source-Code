@@ -27,6 +27,9 @@ const _IPT = "YOUR_IPINFO_TOKEN";
 
 const ROUTE_FILE = "data/route.json";
 
+// Server-side timer API (returns a UTC timestamp - keeps all clients in sync)
+const TIMER_API_URL = "YOUR_TIMING_API_ENDPOINT_LINK";
+
 // Delivery-readiness thresholds (DR values)
 const BASKET_START_DR = 77;
 const CITY_PANEL_MIN_DR = 77;
