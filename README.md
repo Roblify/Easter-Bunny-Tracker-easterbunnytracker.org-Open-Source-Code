@@ -144,6 +144,56 @@ The DR field controls the tracker's phase logic:
 - **DR ≥ 77** — Active delivery; baskets, stats, and city panel are shown
 - **DR = 1048** — Final stop; journey complete
 
+### Server-Sided Timing API
+
+The tracker uses a server-side timer API to prevent users from manipulating their device clock to view the tracker early. Instead of relying on `Date.now()`, the client fetches the current time from a server endpoint once on page load, computes the offset between the server and the local clock, and applies that offset to all timing calculations.
+
+#### How It Works
+
+1. On page load, `serverTime.js` fetches the timestamp from the URL defined in `TIMER_API_URL`
+2. The response is parsed and compared against the client's local clock to compute an offset
+3. All timing throughout the tracker uses `serverNow()` (milliseconds) or `serverNowSec()` (Unix seconds) instead of `Date.now()`
+4. If the API is unreachable after 3 attempts, the tracker falls back to the local clock
+
+#### Creating Your Own Timer Endpoint
+
+The API endpoint must return the current UTC time in one of these supported formats:
+
+| Format | Example |
+|---|---|
+| `MM/DD/YYYY HH:MM:SS` | `04/04/2026 06:00:00` |
+| ISO-8601 | `2026-04-04T06:00:00Z` |
+| Unix timestamp (seconds or milliseconds) | `1775280000` |
+
+A [Cloudflare Worker](https://workers.cloudflare.com/) (free tier) is a simple way to host this:
+
+```js
+export default {
+  fetch(request) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/time") {
+      const now = new Date();
+      const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(now.getUTCDate()).padStart(2, "0");
+      const yyyy = now.getUTCFullYear();
+      const hh = String(now.getUTCHours()).padStart(2, "0");
+      const mi = String(now.getUTCMinutes()).padStart(2, "0");
+      const ss = String(now.getUTCSeconds()).padStart(2, "0");
+      return new Response(`${mm}/${dd}/${yyyy} ${hh}:${mi}:${ss}`, {
+        headers: { "Access-Control-Allow-Origin": "*" }
+      });
+    }
+
+    return new Response("Not Found", { status: 404 });
+  }
+};
+```
+
+Deploy the Worker, then update `TIMER_API_URL` in `js/config.js` to point to your endpoint.
+
+> 💡 To restrict the API to your domain only, check the `Origin` header and return a `403` for unauthorized origins.
+
 ---
 
 ## 🛠️ Tools
