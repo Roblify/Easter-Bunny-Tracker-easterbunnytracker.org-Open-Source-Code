@@ -258,9 +258,10 @@ This confirms that `data/route.json` has been written with updated timestamps, a
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for full terms.
+This project is licensed under the GNU Affero General Public License v3.0. See the [LICENSE](LICENSE) file for full terms.
 
-You are free to use, modify, and distribute this code, provided that any distributed modifications are also released under the GPL-3.0.
+You are free to use, modify, and distribute this code, provided that any distributed modifications are also released under the AGPL-3.0.
+If you run a modified version of this software over a network, you must also make the source code of your modified version available to its users.
 
 ---
 
