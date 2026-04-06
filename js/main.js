@@ -30,6 +30,14 @@
             return;
         }
 
+        // -- WebGL check ------------------------------------------------------
+        if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: false })) {
+            console.error("WebGL is not supported by this browser.");
+            const el = document.getElementById("statStatus");
+            if (el) el.textContent = "Your browser does not support WebGL. Please try a different browser or enable hardware acceleration.";
+            return;
+        }
+
         // -- Boot -------------------------------------------------------------
 
         const statDurationEl = $("statDuration");
@@ -51,7 +59,11 @@
             zoom: LOCKED_ZOOM,
             bearing: 0,
             pitch: 0,
-            projection: mapDimensionMode === "3d" ? "globe" : "mercator"
+            projection: mapDimensionMode === "3d" ? "globe" : "mercator",
+            // Render at full device resolution (retina/HiDPI) for sharp tiles
+            pixelRatio: window.devicePixelRatio || 1,
+            // Fetch higher-resolution tiles than the zoom level normally would
+            maxTileCacheSize: 200
         });
 
         // -- Session state -----------------------------------------------------
@@ -60,58 +72,171 @@
 
         let isLocked = true;
 
+        // -- Device detection -----------------------------------------------------
+        const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        const _isMobile = _isIOS || /Android/i.test(navigator.userAgent);
+
         // -- Map dimension (2D / 3D) -------------------------------------------
 
         function applyMapDimensionMode() {
-            if (mapDimensionMode === "3d") {
-                map.setProjection("globe");
+            try {
+                if (mapDimensionMode === "3d" && !_isIOS) {
+                    map.setProjection("globe");
 
-                if (currentStyle === "standard") {
-                    map.setFog({
-                        range: [0.6, 8], color: "rgb(186, 210, 235)",
-                        "high-color": "rgb(36, 92, 223)", "horizon-blend": 0.02,
-                        "space-color": "rgb(11, 11, 25)", "star-intensity": 0.6
-                    });
+                    if (currentStyle === "standard") {
+                        map.setFog({
+                            range: [0.6, 8], color: "rgb(186, 210, 235)",
+                            "high-color": "rgb(36, 92, 223)", "horizon-blend": 0.02,
+                            "space-color": "rgb(11, 11, 25)", "star-intensity": 0.6
+                        });
+                    } else {
+                        const SPACE = "rgb(5, 5, 12)";
+                        map.setFog({
+                            range: [0.8, 10], color: SPACE, "high-color": SPACE,
+                            "horizon-blend": 0, "space-color": SPACE, "star-intensity": 0.6
+                        });
+                    }
                 } else {
-                    const SPACE = "rgb(5, 5, 12)";
-                    map.setFog({
-                        range: [0.8, 10], color: SPACE, "high-color": SPACE,
-                        "horizon-blend": 0, "space-color": SPACE, "star-intensity": 0.6
-                    });
+                    map.setProjection("mercator");
+                    // Clear fog safely — iOS chokes on null
+                    try { map.setFog({}); } catch (e) { /* ignore */ }
+                    if (isLocked && !cinematicCamEnabled) {
+                        map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+                    }
                 }
-            } else {
-                map.setProjection("mercator");
-                map.setFog(null);
-                if (isLocked && !cinematicCamEnabled) {
-                    map.easeTo({ pitch: 0, bearing: 0, duration: 400 });
+            } catch (e) {
+                console.warn("[map] applyMapDimensionMode failed:", e);
+            }
+        }
+
+        // -- Style fallback chain ------------------------------------------------
+        // Fallback order:
+        //   Standard → custom Satellite → stock Mapbox satellite
+        //   custom Satellite → stock Mapbox satellite
+        //   (stock Mapbox satellite is the final safety net)
+
+        let _fallbackLevel = 0; // 0 = none, 1 = tried custom satellite, 2 = tried stock satellite
+
+        function fallbackStyle(reason) {
+            console.warn("[map] Style issue (" + reason + ") — attempting fallback. Level: " + _fallbackLevel);
+
+            if (_fallbackLevel === 0) {
+                // First fallback: try custom Satellite (or stock if already on custom satellite)
+                if (currentStyle === "satellite") {
+                    // Already on custom satellite — skip to stock
+                    _fallbackLevel = 1;
+                } else {
+                    _fallbackLevel = 1;
+                    currentStyle = "satellite";
+                    saveSettings({ mapStyle: "satellite" });
+                    if (typeof updateMapStyleButton === "function") updateMapStyleButton();
+                    try { map.setStyle(SATELLITE_STYLE); return; } catch (e) {
+                        console.warn("[map] Custom satellite fallback failed:", e);
+                    }
+                }
+            }
+
+            if (_fallbackLevel <= 1) {
+                // Final fallback: stock Mapbox satellite (works on all devices)
+                _fallbackLevel = 2;
+                console.warn("[map] Falling back to stock Mapbox satellite style.");
+                currentStyle = "satellite";
+                if (typeof updateMapStyleButton === "function") updateMapStyleButton();
+                try { map.setStyle(FALLBACK_SATELLITE_STYLE); } catch (e) {
+                    console.error("[map] All style fallbacks exhausted:", e);
                 }
             }
         }
 
         map.on("style.load", () => {
             applyMapDimensionMode();
-            if (currentStyle === "standard") map.setConfigProperty("basemap", "lightPreset", "dusk");
 
-            // -- Hide roads ---------------------------------------------------
-            // Try the component-based config property first (Standard / Standard-Satellite styles)
-            try {
-                map.setConfigProperty("basemap", "showRoadLabels", false);
-            } catch (e) {
-                // Not supported on this style -- that's fine
+            // setConfigProperty is only for Standard / Standard-Satellite component styles.
+            // Skip entirely on stock styles and on iOS (where these calls can cause
+            // silent rendering failures on unsupported styles).
+            const isComponentStyle = currentStyle === "standard" ||
+                (currentStyle === "satellite" && SATELLITE_STYLE.includes("theroblify") && _fallbackLevel < 2);
+
+            if (isComponentStyle && !_isIOS) {
+                if (currentStyle === "standard") {
+                    try { map.setConfigProperty("basemap", "lightPreset", "dusk"); } catch (e) {
+                        console.warn("[map] setConfigProperty lightPreset failed:", e);
+                    }
+                }
+
+                // -- Hide roads (but preserve borders, labels, and admin boundaries) --
+                try { map.setConfigProperty("basemap", "showRoadLabels", false); } catch (e) { /* unsupported */ }
+                try { map.setConfigProperty("basemap", "showPlaceLabels", true); } catch (e) { /* unsupported */ }
+                try { map.setConfigProperty("basemap", "showPointOfInterestLabels", false); } catch (e) { /* unsupported */ }
             }
 
-            // Also hide any traditional road layers that are present in the style
-            const layers = map.getStyle().layers;
-            for (const layer of layers) {
-                const id = (layer.id || "").toLowerCase();
-                const sl = (layer["source-layer"] || "").toLowerCase();
-                if (id.includes("road") || sl.includes("road")) {
-                    map.setLayoutProperty(layer.id, "visibility", "none");
+            // Layer-level road hiding (works on all style types)
+            try {
+                const layers = map.getStyle().layers;
+                for (const layer of layers) {
+                    const id = (layer.id || "").toLowerCase();
+                    const sl = (layer["source-layer"] || "").toLowerCase();
+
+                    // Skip anything related to borders, labels, or admin boundaries
+                    if (id.includes("admin") || id.includes("boundar") || id.includes("label") ||
+                        id.includes("country") || id.includes("state") || id.includes("place") ||
+                        sl.includes("admin") || sl.includes("boundar")) {
+                        continue;
+                    }
+
+                    if (id.includes("road") || sl.includes("road")) {
+                        map.setLayoutProperty(layer.id, "visibility", "none");
+                    }
                 }
+            } catch (e) {
+                console.warn("[map] Road layer hiding failed:", e);
             }
         });
 
+        // -- Map error recovery -----------------------------------------------
+
+        map.on("error", (e) => {
+            const err = e?.error || e;
+            const status = err?.status || err?.statusCode || "";
+            const msg = err?.message || err?.url || (typeof err === "object" ? JSON.stringify(err) : String(err));
+            console.warn("[map] Error event:", status ? `HTTP ${status} — ${msg}` : msg);
+
+            if (_fallbackLevel < 2) {
+                fallbackStyle(status ? `HTTP ${status}` : msg);
+            }
+        });
+
+        // WebGL context lost — the GPU dropped the context entirely
+        const canvas = map.getCanvas();
+        if (canvas) {
+            canvas.addEventListener("webglcontextlost", (e) => {
+                console.error("[map] WebGL context lost. The map will attempt to restore automatically.");
+                e.preventDefault();  // allow Mapbox to attempt restore
+            });
+        }
+
         await new Promise(resolve => map.on("load", resolve));
+
+        // Force canvas resize — fixes iOS Safari where the container
+        // dimensions aren't picked up correctly on first render.
+        map.resize();
+        // Delayed second resize — some iOS devices need a frame to
+        // calculate the correct container dimensions after layout.
+        setTimeout(() => { try { map.resize(); } catch (e) { /* ignore */ } }, 250);
+
+        // -- Tile-load timeout ------------------------------------------------
+        // If Mapbox fires "load" but tiles never actually render (canvas stays
+        // empty), fall back after 8 seconds.  The "idle" event means all tiles
+        // for the current viewport have been loaded and rendered.
+        let _tilesRendered = false;
+        map.once("idle", () => { _tilesRendered = true; });
+        setTimeout(() => {
+            if (!_tilesRendered && _fallbackLevel < 2) {
+                console.warn("[map] Tile-load timeout — tiles did not render within 8 seconds.");
+                fallbackStyle("tile-load timeout");
+            }
+        }, 8000);
 
         map.setMinZoom(UNLOCKED_MIN_ZOOM);
         map.setMaxZoom(UNLOCKED_MAX_ZOOM);
@@ -372,7 +497,7 @@
                 return;
             }
             if (viewerEtaError) {
-                if (!statDurationEl.textContent || statDurationEl.textContent === "Loading...") {
+                if (!statDurationEl.textContent || statDurationEl.textContent === "Loading..." || statDurationEl.textContent === "HIDDEN | S.M. enabled") {
                     statDurationEl.textContent = "Unknown";
                 }
                 return;
@@ -561,6 +686,7 @@
                 const pitch = map.getPitch();
 
                 currentStyle = currentStyle === "standard" ? "satellite" : "standard";
+                _fallbackLevel = 0; // reset so fallback chain can re-trigger if needed
                 saveSettings({ mapStyle: currentStyle });
                 updateMapStyleButton();
 
