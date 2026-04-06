@@ -1,5 +1,5 @@
 /* =============================================================================
- *  Easter Bunny Tracker  —  config.js
+ *  Easter Bunny Tracker  -  config.js
  *
  *  Sections:
  *    1. Configuration
@@ -16,19 +16,19 @@
 
 const MAPBOX_TOKEN = "YOUR_MAPBOX_API_KEY";
 
-// NOTE: IPInfo tokens cannot be hidden in client-side JavaScript — any visitor
+// NOTE: IPInfo tokens cannot be hidden in client-side JavaScript - any visitor
 // can read the page source or intercept the network request and extract it.
 // The only proper solution is to proxy the IPInfo request through your own
 // server-side endpoint (e.g. a Cloudflare Worker or serverless function) so the
 // token never reaches the browser.  Until then, restrict this token to your
 // domain in the IPInfo dashboard (ipinfo.io → Token settings → "Allowed domains")
 // to limit misuse.
-const _IPT = "YOUR_IPINFO_TOKEN";
+const _IPT = "YOUR_IPINFO_TOKEN_HERE";
 
 const ROUTE_FILE = "data/route.json";
 
 // Server-side timer API (returns a UTC timestamp - keeps all clients in sync)
-const TIMER_API_URL = "YOUR_TIMING_API_ENDPOINT_LINK";
+const TIMER_API_URL = "YOUR_TIMING_ENDPOINT_LINK";
 
 // Delivery-readiness thresholds (DR values)
 const BASKET_START_DR = 77;
@@ -44,7 +44,7 @@ let speedJitter = 0;
 const LOCKED_ZOOM = 5.2;   // zoom during active delivery (DR >= 76)
 const LOCKED_ZOOM_PRE = 3.5;   // zoom before DR 76 and at final stop
 const UNLOCKED_MIN_ZOOM = 0.1;
-const UNLOCKED_MAX_ZOOM = 13.0;
+const UNLOCKED_MAX_ZOOM = 16.0;
 
 // Cinematic camera
 const CINEMATIC_ZOOM_DEFAULT = 6;
@@ -54,6 +54,9 @@ const CINEMATIC_SIDE_OFFSET_DEFAULT_DEG = 30;
 // Map styles
 const STANDARD_STYLE = "mapbox://styles/mapbox/standard";
 const SATELLITE_STYLE = "mapbox://styles/theroblify/cmmqvyxfl00as01sugspqf5d5";
+
+// Universal fallback — stock Mapbox satellite, guaranteed to work on all devices
+const FALLBACK_SATELLITE_STYLE = "mapbox://styles/mapbox/satellite-v9";
 
 const MUSIC_VOLUME = 0.2;
 
