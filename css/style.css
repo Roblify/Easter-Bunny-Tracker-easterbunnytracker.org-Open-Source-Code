@@ -64,6 +64,7 @@ html,
 body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
   background: var(--bg);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -71,7 +72,10 @@ body {
   color: var(--text-primary);
 }
 
-/* Subtle starfield grain overlay on the whole viewport */
+/* Subtle starfield grain overlay on the whole viewport
+   NOTE: Disabled on mobile (max-width: 640px) because the inline SVG
+   feTurbulence filter conflicts with WebGL rendering on iOS WebKit,
+   causing the Mapbox canvas to not render at all. */
 body::before {
   content: '';
   position: fixed;
@@ -81,18 +85,29 @@ body::before {
     radial-gradient(ellipse 60% 50% at 80% 90%, rgba(80, 180, 200, 0.06) 0%, transparent 60%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
+}
+
+@media (max-width: 640px) {
+  body::before {
+    display: none;
+  }
 }
 
 /* ── Cesium Container ───────────────────────────────────────────── */
 #cesiumContainer {
+  position: fixed;
+  inset: 0;
   width: 100%;
   height: 100%;
-  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 0;
+  -webkit-transform: translate3d(0, 0, 0);
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   HUD — Main info panel (top-left)
+   HUD - Main info panel (top-left)
 ══════════════════════════════════════════════════════════════════ */
 #hud {
   position: absolute;
@@ -232,7 +247,7 @@ body::before {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   FLOATING BUTTONS — Lock & Help
+   FLOATING BUTTONS - Lock & Help
 ══════════════════════════════════════════════════════════════════ */
 
 /* Shared button base */
@@ -676,7 +691,7 @@ body::before {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   CITY PANEL — Location info (bottom-right)
+   CITY PANEL - Location info (bottom-right)
 ══════════════════════════════════════════════════════════════════ */
 .city-panel {
   position: absolute;
@@ -790,7 +805,7 @@ body::before {
 
 /* ── HUD collapse toggle (visible only on mobile) ───────────────── */
 .hud-title-row {
-  display: contents; /* transparent on desktop — children behave normally */
+  display: contents; /* transparent on desktop - children behave normally */
 }
 
 .hud-toggle {
@@ -856,7 +871,7 @@ body::before {
     transform: scale(0.92);
   }
 
-  /* Stats container: real box on mobile — scrollable and collapsible */
+  /* Stats container: real box on mobile - scrollable and collapsible */
   #hudStats {
     display: flex;
     flex-direction: column;
